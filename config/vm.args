@@ -1,0 +1,6 @@
+-sname service_discovery
+
+-setcookie service_discovery_cookie
+
++K true
++A30

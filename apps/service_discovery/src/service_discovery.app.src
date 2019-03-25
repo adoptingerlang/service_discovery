@@ -1,0 +1,16 @@
+{application, service_discovery,
+ [{description, "An OTP application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {service_discovery_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    erldns
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
