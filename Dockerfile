@@ -1,33 +1,36 @@
 FROM erlang:21-alpine as builder
 
-RUN apk add --no-cache --update tar curl git bash make libc-dev gcc g++ vim
+# git for fetching non-hex depenencies
+# tar for unpacking the target system
+RUN apk add --no-cache tar git
 
 WORKDIR /src
 
-# build and cache dependencies
+# build and cache dependencies as their own layer
 COPY rebar.config rebar.lock /src/
 RUN rebar3 compile
 
-# copy in the source and build release
+# copy in the source and build the release tarball
 COPY . /src
 RUN rebar3 as prod tar
 
+# unpack tarball to be copied into the image built next
 RUN mkdir -p /opt/rel
 RUN tar -zxvf /src/_build/prod/rel/*/*.tar.gz -C /opt/rel
 
-FROM alpine:3.8
+FROM alpine:3.9
 
-RUN apk add --no-cache openssl-dev ncurses
+# install openssl, needed by the crypto app
+RUN apk add --no-cache openssl ncurses
 
 WORKDIR /opt/service_discovery
 
 ENV NODE 127.0.0.1
 ENV COOKIE service_discovery
 
-COPY --chown=1000:100 --from=builder /opt/rel /opt/service_discovery
-ENV HOME /opt/tmpfs
-
-EXPOSE 8080 8080
+# COPY --chown=1000:100 --from=builder /opt/rel /opt/service_discovery
+COPY --from=builder /opt/rel /opt/service_discovery
+# ENV HOME /opt/tmpfs
 
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 

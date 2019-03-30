@@ -1,0 +1,6 @@
+app:
+  image: adoptingerlang.org/service_discovery
+  ports:
+    - 8053:8053
+  environment:
+    - NODE=127.0.0.1
