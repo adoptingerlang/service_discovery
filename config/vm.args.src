@@ -1,7 +1,14 @@
--sname service_discovery
+-sname service_discovery@localhost
 
 -setcookie service_discovery_cookie
 
 +A30
 
 +C multi_time_warp
+
+# or very_short
++sbwt none
+
+# to decide
+# +swct
+# +swt
