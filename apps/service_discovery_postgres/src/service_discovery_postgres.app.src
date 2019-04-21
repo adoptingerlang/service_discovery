@@ -1,5 +1,5 @@
-{application, service_discovery,
- [{description, "Core functionality for service discovery service"},
+{application, service_discovery_postgres,
+ [{description, "Postgres backend for service discovery service"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {service_discovery_app, []}},

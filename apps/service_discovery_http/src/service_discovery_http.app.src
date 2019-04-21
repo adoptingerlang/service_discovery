@@ -1,12 +1,11 @@
-{application, service_discovery,
- [{description, "Core functionality for service discovery service"},
+{application, service_discovery_http,
+ [{description, "HTTP frontend for service discovery service"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {service_discovery_app, []}},
   {applications,
    [kernel,
-    stdlib,
-    erldns
+    stdlib
    ]},
   {env,[]},
   {modules, []},
