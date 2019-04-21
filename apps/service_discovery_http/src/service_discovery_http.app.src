@@ -1,5 +1,5 @@
 {application, service_discovery_http,
- [{description, "An OTP application"},
+ [{description, "HTTP frontend for service discovery service"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {service_discovery_app, []}},
