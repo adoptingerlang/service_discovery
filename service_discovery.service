@@ -1,0 +1,14 @@
+[Unit]
+Description=Service Discovery Runner
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/service_discovery
+EnvironmentFile=/etc/default/service_discovery.env
+ExecStart=/opt/service_discovery/bin/service_discovery foreground
+Restart=on-failure
+Environment=RELX_OUT_FILE_PATH=/tmp/
+Environment=COOKIE=service_discovery_cookie
+
+[Install]
+WantedBy=multi-user.target
