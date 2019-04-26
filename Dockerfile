@@ -9,7 +9,6 @@ WORKDIR /src
 
 # build and cache dependencies as their own layer
 COPY rebar.config rebar.lock .
-# --mount=type=cache,target=/tmp/service_discovery/_build
 RUN --mount=type=cache,target=/root/.cache/rebar3 rebar3 compile
 
 # RUN --mount=target=. \
