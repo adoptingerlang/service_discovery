@@ -29,7 +29,7 @@ COPY . .
 # RUN --mount=target=. \
 #     --mount=type=cache,target=/tmp/service_discovery/_build \
 RUN rebar3 as prod tar && \
-    tar -zxvf /tmp/service_discovery/_build/prod/rel/*/*.tar.gz -C /opt/rel
+    tar -zxvf /src/_build/prod/rel/*/*.tar.gz -C /opt/rel
 
 FROM alpine:3.9 as runner
 

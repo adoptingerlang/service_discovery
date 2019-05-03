@@ -1,2 +1,1 @@
-docker_compose('docker-compose.yml')
-docker_build('adoptingerlang.org/service_discovery', '.')
+k8s_yaml('deployment/base/deployment.yaml')
