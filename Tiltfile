@@ -1,1 +1,1 @@
-k8s_yaml('deployment/base/deployment.yaml')
+k8s_yaml(kustomize('deployment/dev'))

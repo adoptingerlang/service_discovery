@@ -1,0 +1,5 @@
+bases:
+- ../base
+images:
+- name: tsloughter/service_discovery
+  newTag: 11612cc5e0ab19f12ce2e9a3360821b170500808

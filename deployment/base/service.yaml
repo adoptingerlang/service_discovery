@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: service-discovery
+spec:
+  selector:
+    app: service-discovery
+  ports:
+  - protocol: UDP
+    port: 8053
+    targetPort: 8053
