@@ -2,13 +2,10 @@
 
 -setcookie service_discovery_cookie
 
-+A30
++S ${SCHEDULERS}
 
 +C multi_time_warp
 
-# or very_short
 +sbwt none
 
-# to decide
-# +swct
-# +swt
++A30
