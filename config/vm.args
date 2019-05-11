@@ -1,7 +1,0 @@
--sname service_discovery
-
--setcookie service_discovery_cookie
-
-+A30
-
-+C multi_time_warp
