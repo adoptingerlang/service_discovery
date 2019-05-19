@@ -5,7 +5,8 @@
   {mod, {service_discovery_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    elli
    ]},
   {env,[]},
   {modules, []},

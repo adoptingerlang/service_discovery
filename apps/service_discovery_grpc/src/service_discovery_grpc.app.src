@@ -5,7 +5,8 @@
   {mod, {service_discovery_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    grpcbox
    ]},
   {env,[]},
   {modules, []},
