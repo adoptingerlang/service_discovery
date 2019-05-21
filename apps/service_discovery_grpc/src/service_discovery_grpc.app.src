@@ -2,7 +2,7 @@
  [{description, "GRPC frontend for service discovery service"},
   {vsn, "0.1.0"},
   {registered, []},
-  {mod, {service_discovery_app, []}},
+  {mod, {service_discovery_grpc_app, []}},
   {applications,
    [kernel,
     stdlib,

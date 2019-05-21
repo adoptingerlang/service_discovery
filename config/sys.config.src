@@ -4,7 +4,7 @@
  {erldns,
   [%% DB Config
    {storage,
-    [{type, erldns_storage_json},    %% erldns_storage_json | erldns_storage_mnesia
+    [{type, sdp_erldns_storage},    %% erldns_storage_json | erldns_storage_mnesia
      {dir, "db"}]},
    {servers, [
               [{name, inet_localhost_1},
@@ -16,7 +16,7 @@
 
    {use_root_hints, false},
    {catch_exceptions, false},
-   %% {zones, "/home/tristan/Devel/erldns/priv/example.zone.json"},
+   {zones, "/home/tristan/Devel/erldns/priv/example.zone.json"},
 
    {pools, [
             {tcp_worker_pool, erldns_worker, [

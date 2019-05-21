@@ -1,6 +1,30 @@
-app:
-  image: adoptingerlang.org/service_discovery
-  ports:
+version: '3'
+services:
+  app:
+    image: tsloughter/service_discovery
+    ports:
     - 8053:8053
-  environment:
+    environment:
     - NODE=127.0.0.1
+
+  postgres:
+    image: postgres:11-alpine
+    ports:
+    - 5432:5432
+    environment:
+      POSTGRES_DB: discovery
+      POSTGRES_USER: discovery
+      POSTGRES_PASSWORD: password
+
+  flyway:
+    image: boxfuse/flyway:5.2.4
+    command:
+    - -url=jdbc:postgresql://postgres:5432/discovery
+    - -user=discovery
+    - -password=password
+    - -connectRetries=60
+    - migrate
+    volumes:
+    - ./sql:/flyway/sql
+    depends_on:
+    - postgres

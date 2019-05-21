@@ -1,0 +1,4 @@
+CREATE TABLE zones (
+  name VARCHAR(255) NOT NULL,
+  ttl  INT DEFAULT NULL
+);
