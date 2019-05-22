@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: service-discovery
-        image: tsloughter/service_discovery:06f522015c0d4c9ddcba73fdd632cf667cdb482c
+        image: service_discovery
         ports:
         - containerPort: 8053
           protocol: UDP

@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    service: postgres
+  name: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        service: postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: discovery
+        - name: POSTGRES_PASSWORD
+          value: password
+        - name: POSTGRES_USER
+          value: discovery
+        image: postgres:11-alpine
+        name: postgres
+        ports:
+        - containerPort: 5432
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+      restartPolicy: Always
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: pgdata

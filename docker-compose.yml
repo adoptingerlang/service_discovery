@@ -1,11 +1,13 @@
 version: '3'
 services:
-  app:
-    image: tsloughter/service_discovery
-    ports:
-    - 8053:8053
-    environment:
-    - NODE=127.0.0.1
+  # app:
+  #   image: tsloughter/service_discovery
+  #   ports:
+  #   - 8053:8053
+  #   environment:
+  #   - NODE=127.0.0.1
+  #   - SCHEDULERS=1
+  #   - LOGGER_LEVEL=debug
 
   postgres:
     image: postgres:11-alpine
@@ -15,6 +17,8 @@ services:
       POSTGRES_DB: discovery
       POSTGRES_USER: discovery
       POSTGRES_PASSWORD: password
+    volumes:
+    - pgdata:/var/lib/postgresql/data
 
   flyway:
     image: boxfuse/flyway:5.2.4
@@ -28,3 +32,6 @@ services:
     - ./sql:/flyway/sql
     depends_on:
     - postgres
+
+volumes:
+  pgdata:
