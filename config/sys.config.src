@@ -26,7 +26,7 @@
            ]}
   ]},
 
- {kernel, [{logger_level, ${LOGGER_LEVEL}},
-           {logger, [{handler, default, logger_std_h,
-                      #{formatter => {logger_formatter, #{single_line => true}}}}]}]}
+ {kernel, [{logger, [{handler, default, logger_std_h,
+                      #{level => ${LOGGER_LEVEL},
+                        formatter => {logger_formatter, #{single_line => true}}}}]}]}
 ].
