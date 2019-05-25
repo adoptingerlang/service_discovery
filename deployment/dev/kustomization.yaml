@@ -1,3 +1,5 @@
+namespace: service-discovery-dev
+nameSuffix: -dev
 bases:
 - ../base
 images:
@@ -8,3 +10,9 @@ resources:
 - postgres-deployment.yaml
 - postgres-service.yaml
 - pgdata-persistentvolumeclaim.yaml
+vars:
+- name: POSTGRES_SERVICE
+  objref:
+    kind: Service
+    name: postgres
+    apiVersion: v1

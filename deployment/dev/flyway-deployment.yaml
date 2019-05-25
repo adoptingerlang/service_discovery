@@ -17,7 +17,7 @@ spec:
         emptyDir: {}
       containers:
       - args:
-        - -url=jdbc:postgresql://postgres.default.svc.cluster.local:5432/discovery
+        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
         - -user=discovery
         - -password=password
         - -connectRetries=60
