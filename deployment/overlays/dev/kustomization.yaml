@@ -1,7 +1,9 @@
 namespace: service-discovery-dev
 nameSuffix: -dev
+commonLabels:
+  overlay: dev
 bases:
-- ../base
+- ../../base
 images:
 - name: service_discovery
   newTag: latest

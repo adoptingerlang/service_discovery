@@ -9,7 +9,6 @@ resources:
 - service.yaml
 configMapGenerator:
 - name: configmap
-  # files:
-  # - application.properties
-  literals:
-  - FOO2=Bar2
+  env: default.env
+  # envs:
+  # - default_env
