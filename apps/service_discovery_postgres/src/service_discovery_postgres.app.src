@@ -6,6 +6,7 @@
   {applications,
    [kernel,
     stdlib,
+    eql,
     pgo
    ]},
   {env,[]},

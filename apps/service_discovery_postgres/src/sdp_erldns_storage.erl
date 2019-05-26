@@ -2,6 +2,7 @@
 
 -include_lib("erldns/include/erldns.hrl").
 -include_lib("kernel/include/logger.hrl").
+-include_lib("dns/include/dns.hrl").
 
 %% API
 -export([create/1,
@@ -25,11 +26,20 @@ create(authorities) ->
     ok.
 
 -spec insert(atom(), any()) -> any().
-insert(zones, #zone{} = Zone)->
-    ?LOG_INFO("INSERT ~p", [Zone]),
+insert(zones, #zone{name=Name,
+                    version=_Version,
+                    authority=Authority,
+                    %% record_count = 0 :: non_neg_integer(),
+                    records=Records,
+                    %% records_by_name ::  #{binary() => [dns:rr()]} | trimmed,
+                    keysets=Keysets})->
+    A = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Authority],
+    R = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Records],
+    #{command := insert} =
+        sdp_query:run(insert_zone, [Name, <<"1">>, {array, A}, {array, R}, {array, Keysets}]),
     ok;
 insert(zones, {_N, #zone{} = Zone})->
-    ?LOG_INFO("INSERT ~p", [Zone]),
+    insert(zones, Zone),
     ok;
 insert(authorities, #authorities{} = Auth) ->
     ?LOG_INFO("INSERT ~p", [Auth]),
@@ -52,6 +62,22 @@ backup_tables()->
     ok.
 
 -spec select(Table :: atom(), Key :: term()) -> [tuple()].
+select(zones, Key)->
+    case sdp_query:run(select_zones, [Key]) of
+        #{command := select, rows := []} ->
+            [];
+        #{command := select, rows := [Row | _]} ->
+            {Name, Version, {array, _Authority}, {array, Records}, Keysets} = Row,
+            DecodedRecords = [json_to_record(jsx:decode(R)) || {jsonb, R} <- Records],
+            Authorities = lists:filter(erldns_records:match_type(?DNS_TYPE_SOA), DecodedRecords),
+            [{Name, #zone{name=Name,
+                          version=Version,
+                          authority=Authorities,
+                          record_count = length(DecodedRecords),
+                          records=DecodedRecords,
+                          records_by_name=erldns_zone_cache:build_named_index(DecodedRecords),
+                          keysets=Keysets}}]
+    end;
 select(Table, Key)->
     ?LOG_INFO("SELECT ~p", [{Table, Key}]),
     [].
@@ -80,3 +106,18 @@ list_table(authorities) ->
     [];
 list_table(_Name) ->
     {error, doesnt_exist}.
+
+%%
+
+json_to_record(Record) ->
+    List = json_record_to_list(Record),
+    erldns_zone_parser:json_record_to_erlang(List).
+
+json_record_to_list(JsonRecord) ->
+  [
+   erldns_config:keyget(<<"name">>, JsonRecord),
+   erldns_config:keyget(<<"type">>, JsonRecord),
+   erldns_config:keyget(<<"ttl">>, JsonRecord),
+   erldns_config:keyget(<<"content">>, JsonRecord),
+   erldns_config:keyget(<<"context">>, JsonRecord)
+  ].

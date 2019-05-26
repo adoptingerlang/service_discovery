@@ -1,4 +1,7 @@
 CREATE TABLE zones (
-  name VARCHAR(255) NOT NULL,
-  ttl  INT DEFAULT NULL
-);
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        authority JSONB[] NOT NULL,
+        records JSONB[] NOT NULL,
+        keysets JSONB[] NOT NULL
+        );

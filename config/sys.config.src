@@ -4,7 +4,7 @@
  {erldns,
   [%% DB Config
    {storage,
-    [{type, sdp_erldns_storage},    %% erldns_storage_json | erldns_storage_mnesia
+    [{type, sdp_erldns_storage},    %% sdp_erldns_storage | erldns_storage_json | erldns_storage_mnesia
      {dir, "db"}]},
    {servers, [
               [{name, inet_localhost_1},

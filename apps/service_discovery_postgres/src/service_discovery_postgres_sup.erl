@@ -31,7 +31,27 @@ start_link() ->
 %% Before OTP 18 tuples must be used to specify a child. e.g.
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    {ok, {{one_for_all, 0, 1}, []}}.
+    PoolConfig = #{host => "localhost",
+                   port => 5432,
+                   user => "discovery",
+                   password => "password",
+                   database => "discovery",
+
+                   %% pool specific settings
+                   %% pool_size => integer(),
+                   %% queue_target => integer(),
+                   %% queue_interval => integer(),
+                   %% idle_interval => integer(),
+                   queue => true,
+                   trace => false,
+                   decode_opts => []},
+
+    SupFlags = #{strategy => one_for_one,
+                 intensity => 5,
+                 period => 10},
+    ChildSpec = #{id => sdp_pool,
+                  start => {pgo_pool, start_link, [default, PoolConfig]}},
+    {ok, {SupFlags, [ChildSpec]}}.
 
 %%====================================================================
 %% Internal functions
