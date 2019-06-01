@@ -1,6 +1,6 @@
 {application, service_discovery_http,
  [{description, "HTTP frontend for service discovery service"},
-  {vsn, "0.1.0"},
+  {vsn, {git, short}},
   {registered, []},
   {mod, {service_discovery_app, []}},
   {applications,

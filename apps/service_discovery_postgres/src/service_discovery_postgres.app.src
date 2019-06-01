@@ -1,6 +1,6 @@
 {application, service_discovery_postgres,
  [{description, "Postgres backend for service discovery service"},
-  {vsn, "0.1.0"},
+  {vsn, {git, short}},
   {registered, []},
   {mod, {service_discovery_postgres_app, []}},
   {applications,
@@ -9,7 +9,11 @@
     eql,
     pgo
    ]},
-  {env,[]},
+  {env,[{db_config, #{host => "localhost",
+                      port => 5432,
+                      user => "discovery",
+                      password => "password",
+                      database => "discovery"}}]},
   {modules, []},
 
   {licenses, ["Apache 2.0"]},

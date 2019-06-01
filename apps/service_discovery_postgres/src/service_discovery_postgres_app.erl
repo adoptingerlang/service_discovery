@@ -10,7 +10,8 @@
 
 start(_StartType, _StartArgs) ->
     sdp_query:load_sql(),
-    service_discovery_postgres_sup:start_link().
+    {ok, DBConfig} = application:get_env(service_discovery_postgres, db_config),
+    service_discovery_postgres_sup:start_link(DBConfig).
 
 stop(_State) ->
     ok.
