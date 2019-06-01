@@ -3,5 +3,4 @@ CREATE TABLE zones (
         version TEXT NOT NULL,
         authority JSONB[] NOT NULL,
         records JSONB[] NOT NULL,
-        keysets JSONB[] NOT NULL
-        );
+        keysets JSONB[] NOT NULL);

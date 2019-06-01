@@ -29,9 +29,7 @@ create(authorities) ->
 insert(zones, #zone{name=Name,
                     version=_Version,
                     authority=Authority,
-                    %% record_count = 0 :: non_neg_integer(),
                     records=Records,
-                    %% records_by_name ::  #{binary() => [dns:rr()]} | trimmed,
                     keysets=Keysets})->
     A = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Authority],
     R = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Records],
@@ -39,18 +37,16 @@ insert(zones, #zone{name=Name,
         sdp_query:run(insert_zone, [Name, <<"1">>, {array, A}, {array, R}, {array, Keysets}]),
     ok;
 insert(zones, {_N, #zone{} = Zone})->
-    insert(zones, Zone),
-    ok;
-insert(authorities, #authorities{} = Auth) ->
-    ?LOG_INFO("INSERT ~p", [Auth]),
-    ok.
+    insert(zones, Zone);
+insert(authorities, #authorities{} = _Auth) ->
+    {error, not_implemented}.
 
 -spec delete_table(atom()) -> ok | {aborted, any()}.
-delete_table(Table) ->
+delete_table(_Table) ->
     ok.
 
 -spec delete(Table :: atom(), Key :: term()) -> ok | any().
-delete(Table, Key)->
+delete(_Table, _Key)->
     ok.
 
 -spec backup_table(atom()) -> ok | {error, Reason :: term()}.
@@ -78,32 +74,26 @@ select(zones, Key)->
                           records_by_name=erldns_zone_cache:build_named_index(DecodedRecords),
                           keysets=Keysets}}]
     end;
-select(Table, Key)->
-    ?LOG_INFO("SELECT ~p", [{Table, Key}]),
-    [].
+select(_Table, _Key)->
+    {error, not_implemented}.
 
 -spec select(atom(), list(), infinite | integer()) -> [tuple()].
-select(_Table, MatchSpec, _Limit) ->
-    ?LOG_INFO("SELECT ~p", [{_Table, MatchSpec}]),
-    [].
+select(_Table, _MatchSpec, _Limit) ->
+    {error, not_implemented}.
 
 -spec foldl(fun(), list(), atom())  -> Acc :: term() | {error, Reason :: term()}.
-foldl(Iterator, _Acc, Table) ->
-    ?LOG_INFO("FOLD ~p", [Table]),
-    [].
+foldl(_Iterator, _Acc, _Table) ->
+    {error, not_implemented}.
 
 -spec empty_table(atom()) -> ok | {aborted, term()}.
 empty_table(_Table) ->
-    ok.
+    {error, not_implemented}.
 
--spec list_table(atom()) ->
-  [] | [#zone{}] | [#authorities{}] | [tuple()] | {error, doesnt_exist}.
+-spec list_table(atom()) -> [] | [#zone{}] | [#authorities{}] | [tuple()] | {error, doesnt_exist}.
 list_table(zones) ->
-    ?LOG_INFO("LIST ZONES", []),
-    [];
+    {error, not_implemented};
 list_table(authorities) ->
-    ?LOG_INFO("LIST AUTHORITIES", []),
-    [];
+    {error, not_implemented};
 list_table(_Name) ->
     {error, doesnt_exist}.
 
