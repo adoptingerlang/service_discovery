@@ -1,0 +1,74 @@
+ARG BASE_IMAGE=erlang:22-alpine
+ARG RUNNER_IMAGE=alpine:3.9
+FROM $BASE_IMAGE as builder
+
+# remove once base image has rebar3 3.11.1
+RUN rebar3 local upgrade
+ENV PATH=$HOME/.cache/rebar3/bin:$PATH
+
+# git for fetching non-hex depenencies
+# add any other Alpine libraries needed to compile the project here
+RUN apk add --no-cache git
+
+WORKDIR /src
+
+# build and cache dependencies as their own layer
+COPY rebar.config rebar.lock .
+RUN rebar3 compile
+
+FROM builder as releaser
+
+# remove once base image has rebar3 3.11.1
+RUN rebar3 local upgrade
+ENV PATH=/root/.cache/rebar3/bin:$PATH
+
+# tar for unpacking the target system
+RUN apk add --no-cache tar
+
+WORKDIR /src
+RUN mkdir -p /opt/rel
+
+# copy in the source and build the release tarball
+COPY . .
+# unpack tarball to be copied into the image built next
+RUN /root/.cache/rebar3/bin/rebar3 as prod tar && \
+    tar -zxvf /src/_build/prod/rel/*/*.tar.gz -C /opt/rel
+
+FROM $RUNNER_IMAGE as runner
+
+# install openssl, needed by the crypto app
+RUN apk add --no-cache openssl ncurses
+
+WORKDIR /opt/service_discovery
+
+# RUN addgroup -g 50 -S sd \
+#     && adduser -D -S -h /opt/service_discovery -s /sbin/nologin \
+#        -u 1000 -G sd sd
+# USER sd:sd
+
+COPY --from=releaser /opt/rel /opt/service_discovery
+
+# RUN chown -R 1000:1000 /opt/service_discovery
+
+# ENV COOKIE service_discovery
+# write files generated during startup to /tmp
+ENV RELX_OUT_FILE_PATH /tmp
+# ENV HOME /tmp
+
+ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
+
+CMD ["foreground"]
+
+FROM builder as plt
+
+# remove once base image has rebar3 3.11.1
+RUN rebar3 local upgrade
+ENV PATH=/root/.cache/rebar3/bin:$PATH
+
+RUN /root/.cache/rebar3/bin/rebar3 dialyzer --plt-location /root/.cache/rebar3 \
+    --plt-prefix deps \
+    --base-plt-prefix otp
+
+ENTRYPOINT ["rebar3"]
+
+CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]

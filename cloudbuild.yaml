@@ -1,0 +1,14 @@
+steps:
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --target=runner
+  - --dockerfile=./Dockerfile.cb
+  - --build-arg=BASE_IMAGE=$_BASE_IMAGE
+  - --build-arg=RUNNER_IMAGE=$_RUNNER_IMAGE
+  - --destination=gcr.io/$PROJECT_ID/service_discovery:$COMMIT_SHA
+  - --cache=true
+  - --cache-ttl=48h
+
+substitutions:
+  _BASE_IMAGE: erlang:22-alpine
+  _RUNNER_IMAGE: alpine:3.9
