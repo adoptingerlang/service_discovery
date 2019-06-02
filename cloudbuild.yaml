@@ -1,4 +1,21 @@
 steps:
+- name: 'docker/compose:1.24.0'
+  args: ['-f', 'docker-compose.yml', 'up', '-d']
+
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --target=releaser
+  - --dockerfile=./Dockerfile.cb
+  - --build-arg=BASE_IMAGE=$_BASE_IMAGE
+  - --build-arg=RUNNER_IMAGE=$_RUNNER_IMAGE
+  - --destination=gcr.io/$PROJECT_ID/service_discovery:tester-$BUILD_ID
+  - --cache=true
+  - --cache-ttl=48h
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['run', '--network', 'workspace_sd_net', '-e', 'BUILD_ID=$BUILD_ID', '--entrypoint', 'rebar3', 'gcr.io/$PROJECT_ID/service_discovery:tester-$BUILD_ID', 'ct']
+
+
 - name: 'gcr.io/kaniko-project/executor:latest'
   args:
   - --target=runner
