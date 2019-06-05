@@ -27,5 +27,5 @@ steps:
   - --cache-ttl=48h
 
 substitutions:
-  _BASE_IMAGE: erlang:22-alpine
+  _BASE_IMAGE: erlang:22.0.2-alpine
   _RUNNER_IMAGE: alpine:3.9

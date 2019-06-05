@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=erlang:22-alpine
+ARG BASE_IMAGE=erlang:22.0.2-alpine
 ARG RUNNER_IMAGE=alpine:3.9
 FROM $BASE_IMAGE as builder
 
