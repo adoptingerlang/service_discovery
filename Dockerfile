@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:experimental
-FROM erlang:21-alpine as builder
+FROM erlang:22-alpine as builder
 
 # git for fetching non-hex depenencies
 # add any other Alpine libraries needed to compile the project here
