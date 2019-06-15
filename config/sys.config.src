@@ -1,15 +1,10 @@
 [
  {service_discovery, []},
 
- {service_discovery_postgres, {db_config, #{host => "localhost",
-                                            port => 5432,
-                                            user => "discovery",
-                                            password => "password",
-                                            database => "discovery"}}},
  {erldns,
   [%% DB Config
    {storage,
-    [{type, sdp_erldns_storage},    %% sdp_erldns_storage | erldns_storage_json | erldns_storage_mnesia
+    [{type, erldns_storage_json},
      {dir, "db"}]},
    {servers, [
               [{name, inet_localhost_1},
@@ -21,7 +16,7 @@
 
    {use_root_hints, false},
    {catch_exceptions, false},
-   {zones, "/home/tristan/Devel/erldns/priv/example.zone.json"},
+   {zones, "${ZONES}"},
 
    {pools, [
             {tcp_worker_pool, erldns_worker, [
