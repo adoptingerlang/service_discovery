@@ -34,7 +34,7 @@ RUN apk add --no-cache openssl ncurses
 
 WORKDIR /opt/service_discovery
 
-COPY --from=releaser /opt/rel /opt/service_discovery
+COPY --from=releaser /opt/rel .
 
 ENV COOKIE service_discovery
 # write files generated during startup to /tmp

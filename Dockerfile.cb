@@ -33,19 +33,11 @@ RUN apk add --no-cache openssl ncurses
 
 WORKDIR /opt/service_discovery
 
-# RUN addgroup -g 50 -S sd \
-#     && adduser -D -S -h /opt/service_discovery -s /sbin/nologin \
-#        -u 1000 -G sd sd
-# USER sd:sd
+COPY --from=releaser /opt/rel .
 
-COPY --from=releaser /opt/rel /opt/service_discovery
-
-# RUN chown -R 1000:1000 /opt/service_discovery
-
-# ENV COOKIE service_discovery
+ENV COOKIE service_discovery
 # write files generated during startup to /tmp
 ENV RELX_OUT_FILE_PATH /tmp
-# ENV HOME /tmp
 
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 
