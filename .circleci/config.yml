@@ -1,0 +1,22 @@
+version: 2.1
+orbs:
+  rebar3: tsloughter/rebar3@0.6.3
+workflows:
+  build-test:
+    jobs:
+      - rebar3/compile
+      - rebar3/lint:
+          requires:
+            - rebar3/compile
+      - rebar3/xref:
+          requires:
+            - rebar3/compile
+      - rebar3/dialyzer:
+          requires:
+            - rebar3/compile
+      - rebar3/ct:
+          requires:
+            - rebar3/compile
+      - rebar3/cover:
+          requires:
+            - rebar3/ct
