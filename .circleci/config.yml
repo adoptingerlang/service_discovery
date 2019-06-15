@@ -2,37 +2,6 @@ version: 2.1
 orbs:
   rebar3: tsloughter/rebar3@0.6.4
 
-jobs:
-  ct:
-    docker:
-      - image: circleci/erlang:22.0.3
-        entrypoint: ["/bin/sh"]
-
-    steps:
-      - setup_remote_docker
-      - checkout
-      - run:
-          command: |
-            set -x
-            docker-compose up -d
-
-      - rebar3/with_deps_cache:
-          steps:
-            - rebar3/ct
-      - rebar3/on_fail_store_crashdump:
-          cmd: ct
-      - store_test_results:
-          path: ~/project/_build/test/logs/
-      - store_artifacts:
-          path: ~/project/_build/test/logs
-          destination: common_test
-
-      # for cover
-      - persist_to_workspace:
-          root: ~/project/
-          paths:
-            - _build/test/
-
 workflows:
   build-test:
     jobs:
@@ -43,9 +12,15 @@ workflows:
       - rebar3/dialyzer:
           requires:
             - rebar3/compile
-      - ct:
+      - rebar3/ct:
+          pre-steps:
+            - setup_remote_docker
+            - run:
+                command: |
+                  set -x
+                  docker-compose up -d
           requires:
             - rebar3/compile
       - rebar3/cover:
           requires:
-            - ct
+            - rebar3/ct
