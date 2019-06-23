@@ -1,14 +1,14 @@
 [
     {
-        "name": "example.com",
+        "name": "in-addr.arpa",
         "records": [
             {
-                "name": "example.com",
+                "name": "in-addr.arpa",
                 "type": "SOA",
                 "ttl": 3600,
                 "data": {
-                    "mname": "ns1.example.com",
-                    "rname": "admin.example.com",
+                    "mname": "ns1.in-addr.arpa",
+                    "rname": "admin.in-addr.arpa",
                     "serial": 2013022001,
                     "refresh": 86400,
                     "retry": 7200,
@@ -17,92 +17,134 @@
                 }
             },
             {
-                "name": "example.com",
+                "name": "4.3.2.1.in-addr.arpa",
+                "type": "PTR",
+                "ttl": 3600,
+                "data": {
+                    "dname": "serviceA.service.sd"
+                }
+            }
+        ]
+    },
+    {
+        "name": "sd",
+        "records": [
+            {
+                "name": "sd",
+                "type": "SOA",
+                "ttl": 3600,
+                "data": {
+                    "mname": "ns1.sd",
+                    "rname": "admin.sd",
+                    "serial": 2013022001,
+                    "refresh": 86400,
+                    "retry": 7200,
+                    "expire": 604800,
+                    "minimum": 300
+                }
+            },
+            {
+                "name": "dns.version.sd",
+                "type": "TXT",
+                "ttl": 3600,
+                "data": {
+                    "txt": "\"1.0.1\""
+                }
+            },
+            {
+                "name": "serviceA.service.sd",
                 "type": "A",
                 "ttl": 3600,
                 "data": {
                     "ip": "1.2.3.4"
                 }
             },
+
             {
-                "name": "example.com",
-                "type": "AAAA",
-                "ttl": 3600,
-                "data": {
-                    "ip": "2001:6A8:0:1:210:4BFF:FE4B:4C61"
-                }
-            },
-            {
-                "name": "example.com",
-                "type": "CAA",
-                "ttl": 3600,
-                "data": {
-                    "flags": 0,
-                    "tag": "issue",
-                    "value": "example.net"
-                }
-            },
-            {
-                "name": "www.example.com",
-                "type": "CNAME",
-                "ttl": 120,
-                "data": {
-                    "dname": "example.com"
-                }
-            },
-            {
-                "name": "example.com",
-                "type": "MX",
-                "ttl": 3600,
-                "data": {
-                    "preference": 10,
-                    "exchange": "mail.example.com"
-                }
-            },
-            {
-                "name": "example.com",
-                "type": "NS",
-                "ttl": 3600,
-                "data": {
-                    "dname": "ns1.example.com"
-                }
-            },
-            {
-                "name": "example.com",
-                "type": "NS",
-                "ttl": 3600,
-                "data": {
-                    "dname": "ns2.example.com"
-                }
-            },
-            {
-                "name": "example.com",
-                "type": "TXT",
-                "ttl": 3600,
-                "data": {
-                    "txt": "\"Hi, this is some text\""
-                }
-            },
-            {
-                "name": "_ldap._tcp.example.com",
+                "name": "_http._tcp.serviceA.service.sd",
                 "type": "SRV",
                 "ttl": 3600,
                 "data": {
                     "priority": 0,
                     "weight": 100,
-                    "port": 389,
-                    "target": "ldap.example.com"
+                    "port": 3000,
+                    "target": "serviceA.service.sd"
                 }
             },
+
             {
-                "name": "ldap.example.com",
+                "name": "serviceB.service.sd",
                 "type": "A",
                 "ttl": 3600,
                 "data": {
-                    "ip": "50.40.50.40"
+                    "ip": "1.2.3.5"
+                }
+            },
+            {
+                "name": "serviceB.service.sd",
+                "type": "A",
+                "ttl": 3600,
+                "data": {
+                    "ip": "1.2.3.6"
+                }
+            },
+
+            {
+                "name": "host1.serviceB.service.sd",
+                "type": "A",
+                "ttl": 3600,
+                "data": {
+                    "ip": "1.2.3.5"
+                }
+            },
+
+            {
+                "name": "host2.serviceB.service.sd",
+                "type": "A",
+                "ttl": 3600,
+                "data": {
+                    "ip": "1.2.3.6"
+                }
+            },
+            {
+                "name": "5.3.2.1.in-addr.arpa",
+                "type": "PTR",
+                "ttl": 3600,
+                "data": {
+                    "dname": "host1.serviceB.service.sd"
+                }
+            },
+            {
+                "name": "6.3.2.1.in-addr.arpa",
+                "type": "PTR",
+                "ttl": 3600,
+                "data": {
+                    "dname": "host1.serviceB.service.sd"
+                }
+            },
+
+            {
+                "name": "_http._tcp.serviceB.service.sd",
+                "type": "SRV",
+                "ttl": 3600,
+                "data": {
+                    "priority": 0,
+                    "weight": 100,
+                    "port": 3000,
+                    "target": "host1.serviceB.service.sd"
+                }
+            },
+            {
+                "name": "_http._tcp.serviceB.service.sd",
+                "type": "SRV",
+                "ttl": 3600,
+                "data": {
+                    "priority": 0,
+                    "weight": 100,
+                    "port": 3000,
+                    "target": "host2.serviceB.service.sd"
                 }
             }
-
         ]
     }
 ]
