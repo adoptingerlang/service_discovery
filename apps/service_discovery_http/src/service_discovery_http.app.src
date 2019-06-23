@@ -2,10 +2,12 @@
  [{description, "HTTP frontend for service discovery service"},
   {vsn, {git, short}},
   {registered, []},
-  {mod, {service_discovery_app, []}},
+  {mod, {service_discovery_http_app, []}},
   {applications,
    [kernel,
     stdlib,
+    service_discovery,
+    jsx,
     elli
    ]},
   {env,[]},
