@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package sd;
+
+service DiscoveryService {
+  rpc GetService(GetServiceRequest) returns (GetServiceResponse);
+  rpc RegisterService(RegisterServiceRequest) returns (RegisterServiceResponse);
+}
+
+message GetServiceRequest {
+
+}
+
+message GetServiceResponse {
+
+}
+
+message RegisterServiceRequest {
+
+}
+
+message RegisterServiceResponse {
+
+}

@@ -21,9 +21,11 @@ handle('GET',[<<"service">>, _Name], Req) ->
     Service = #{redis => #{id => <<"redis">>, port => 8080}},
     ServiceJson = json_encode(is_pretty(Req), Service),
     {ok, [?CONTENT_TYPE_JSON], ServiceJson};
-handle('PUT',[<<"service">>, <<"register">>], _Req) ->
+handle('PUT',[<<"service">>, <<"register">>], Req) ->
+    Body = elli_request:body(Req),
+    _DecodedBody = jsx:decode(Body, [return_maps]),
     {ok, [], <<>>};
-handle('PUT',[<<"service">>, <<"deregister">>], _Req) ->
+handle('PUT',[<<"service">>, <<"deregister">>, _ServiceId], _Req) ->
     {ok, [], <<>>};
 
 handle(_, _, _Req) ->
