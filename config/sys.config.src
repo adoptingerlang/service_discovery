@@ -27,7 +27,9 @@
   ]},
 
  {grpcbox,
-  [{servers, [#{grpc_opts => #{service_protos => [discovery_pb, grpcbox_health_pb, grpcbox_reflection_pb],
+  [{servers, [#{grpc_opts => #{service_protos => [sdg_discovery_pb,
+                                                  grpcbox_health_pb,
+                                                  grpcbox_reflection_pb],
                                services => #{'sd.DiscoveryService' => sdg_service,
                                              'grpc.health.v1.Health' => grpcbox_health_service,
                                              'grpc.reflection.v1alpha.ServerReflection' =>
