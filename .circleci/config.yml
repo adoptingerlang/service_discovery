@@ -28,10 +28,18 @@ workflows:
           executor: erlang_postgres
           pre-steps:
             - checkout
+            - restore_cache:
+                keys: flyway-5.2.4-1
             - run:
                 command: |
-                  wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/5.2.4/flyway-commandline-5.2.4-linux-x64.tar.gz | tar xvz
-                  ./flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
+                  if [ ! -f "/tmp/flyway-5.2.4/flyway" ]; then
+                    wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/5.2.4/flyway-commandline-5.2.4-linux-x64.tar.gz | tar xvz -C /tmp
+                    /tmp/flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
+                  fi
+            - save_cache:
+                key: flyway-5.2.4-1
+                paths:
+                  - /tmp/flyway-5.2.4
 
           requires:
             - rebar3/compile
