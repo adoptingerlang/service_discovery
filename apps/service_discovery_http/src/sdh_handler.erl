@@ -13,18 +13,37 @@ handle(Req, _Args) ->
     handle(Req#req.method, elli_request:path(Req), Req).
 
 handle('GET',[<<"services">>], Req) ->
-    Services = [#{redis => #{id => <<"redis">>, port => 8080}}],
-    ServicesJson = json_encode(is_pretty(Req), Services),
+    Services = service_discovery:list(),
+    ServicesJson = json_encode_services(is_pretty(Req), Services),
     {ok, [?CONTENT_TYPE_JSON], ServicesJson};
 
-handle('GET',[<<"service">>, _Name], Req) ->
-    Service = #{redis => #{id => <<"redis">>, port => 8080}},
-    ServiceJson = json_encode(is_pretty(Req), Service),
+handle('GET',[<<"service">>, ServiceName], Req) ->
+    Service = service_discovery:lookup(ServiceName),
+    ServiceJson = json_encode_service(is_pretty(Req), Service),
     {ok, [?CONTENT_TYPE_JSON], ServiceJson};
-handle('PUT',[<<"service">>, <<"register">>], Req) ->
+handle('PUT',[<<"service">>], Req) ->
     Body = elli_request:body(Req),
-    _DecodedBody = jsx:decode(Body, [return_maps]),
-    {ok, [], <<>>};
+    DecodedBody = jsx:decode(Body, [return_maps]),
+    case (catch create_service(DecodedBody)) of
+        ok ->
+            {ok, [], <<>>};
+        {error, Reason} ->
+            {400, [], io_lib:format("error: ~p", [Reason])}
+    end;
+
+handle('GET',[<<"service">>, ServiceName, <<"endpoints">>], Req) ->
+    Endpoints = service_discovery:lookup_endpoints(ServiceName),
+    EndpointsJson = json_encode_endpoints(is_pretty(Req), Endpoints),
+    {ok, [?CONTENT_TYPE_JSON], EndpointsJson};
+handle('PUT',[<<"service">>, ServiceName, <<"register">>], Req) ->
+    Body = elli_request:body(Req),
+    DecodedBody = jsx:decode(Body, [return_maps]),
+    case register_service(ServiceName, DecodedBody) of
+        ok ->
+            {ok, [], <<>>};
+        {error, Reason} ->
+            {400, [], io_lib:format("error: ~p", [Reason])}
+    end;
 handle('PUT',[<<"service">>, <<"deregister">>, _ServiceId], _Req) ->
     {ok, [], <<>>};
 
@@ -35,6 +54,49 @@ handle_event(_Event, _Data, _Args) ->
     ok.
 
 %%
+
+create_service(ServiceJson) ->
+    case service_from_json(ServiceJson) of
+        {error, _}=Error ->
+            Error;
+        Service ->
+            service_discovery:create(Service)
+    end.
+
+json_encode_service(Pretty, Service=#{name := _Name,
+                                      attributes := _Attributes}) ->
+    json_encode(Pretty, Service).
+
+
+json_encode_services(Pretty, Services) ->
+    json_encode(Pretty, json_encode_services_(Services, [])).
+
+json_encode_services_([], Acc)  ->
+    Acc;
+json_encode_services_([#{name := _ServiceName,
+                          attributes := _Attributes}=Service | Rest], Acc) ->
+    json_encode_services_(Rest, [Service | Acc]).
+
+json_encode_endpoints(Pretty, Endpoints) ->
+    json_encode(Pretty, json_encode_endpoints_(Endpoints, [])).
+
+json_encode_endpoints_([], Acc)  ->
+    Acc;
+json_encode_endpoints_([#{service_name := ServiceName,
+                          ip := IP,
+                          port := Port,
+                          tags := Tags} | Rest], Acc) ->
+    case inet:ntoa(IP) of
+        {error, einval} ->
+            %% add log
+            json_encode_endpoints_(Rest, Acc);
+        IPString ->
+            json_encode_endpoints_(Rest, [#{service_name => ServiceName,
+                                            ip => list_to_binary(IPString),
+                                            port => Port,
+                                            tags => Tags} | Acc])
+    end.
+
 
 json_encode(true, ToEncode) ->
     jsx:prettify(jsx:encode(ToEncode));
@@ -48,3 +110,35 @@ is_pretty(Req) ->
         _ ->
             false
     end.
+
+%% decoded json to service or endpoint maps
+
+service_from_json(#{<<"name">> := Name,
+                    <<"attributes">> := Attributes}) ->
+    #{name => Name,
+      attributes => Attributes};
+service_from_json(_) ->
+    {error, bad_service_json}.
+
+register_service(ServiceName, Json)->
+    case endpoint_from_json(ServiceName, Json) of
+        {ok, Endpoint} ->
+            service_discovery:register(ServiceName, Endpoint);
+        {error, _Reason}=Error ->
+            Error
+    end.
+
+endpoint_from_json(ServiceName, #{<<"ip">> := IPString,
+                                  <<"port">> := Port,
+                                  <<"tags">> := Tags}) ->
+    case inet:parse_address(binary_to_list(IPString)) of
+        {ok, IP} ->
+            {ok, #{service_name => ServiceName,
+                   ip => IP,
+                   port => Port,
+                   tags => Tags}};
+        {error, einval}=Error ->
+            Error
+    end;
+endpoint_from_json(_, _) ->
+    {error, bad_endpoint_json}.

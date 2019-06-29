@@ -20,6 +20,10 @@ run(QueryName, Args) ->
 
 load_sql() ->
     PrivDir = code:priv_dir(service_discovery_postgres),
-    SqlFile = filename:join([PrivDir, "sql", "zones.sql"]),
+    [load_sql(PrivDir, File) || File <- ["zones.sql", "services.sql"]].
+
+load_sql(PrivDir, File) ->
+    SqlFile = filename:join([PrivDir, "sql", File]),
     {ok, Queries} = eql:compile(SqlFile),
+    io:format("Queries ~p ~p~n", [PrivDir, File]),
     [persistent_term:put({?MODULE, Name}, Query) || {Name, Query} <- Queries].
