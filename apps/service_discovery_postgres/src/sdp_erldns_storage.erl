@@ -57,7 +57,7 @@ backup_table(_Table)->
 backup_tables()->
     ok.
 
--spec select(Table :: atom(), Key :: term()) -> [tuple()].
+-spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
     case sdp_query:run(select_zones, [Key]) of
         #{command := select, rows := []} ->
@@ -77,7 +77,7 @@ select(zones, Key)->
 select(_Table, _Key)->
     {error, not_implemented}.
 
--spec select(atom(), list(), infinite | integer()) -> [tuple()].
+-spec select(atom(), list(), infinite | integer()) -> [tuple()] | {error, not_implemented}.
 select(_Table, _MatchSpec, _Limit) ->
     {error, not_implemented}.
 
@@ -87,9 +87,10 @@ foldl(_Iterator, _Acc, _Table) ->
 
 -spec empty_table(atom()) -> ok | {aborted, term()}.
 empty_table(_Table) ->
-    {error, not_implemented}.
+    {aborted, not_implemented}.
 
--spec list_table(atom()) -> [] | [#zone{}] | [#authorities{}] | [tuple()] | {error, doesnt_exist}.
+-spec list_table(atom()) -> [] | [#zone{}] | [#authorities{}] | [tuple()] |
+                            {error, doesnt_exist} | {error, not_implemented}.
 list_table(zones) ->
     {error, not_implemented};
 list_table(authorities) ->
