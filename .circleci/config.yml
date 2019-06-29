@@ -1,6 +1,18 @@
 version: 2.1
+
 orbs:
-  rebar3: tsloughter/rebar3@0.6.4
+  rebar3: tsloughter/rebar3@0.7.0
+
+executors:
+  erlang_postgres:
+    docker:
+      - image: circleci/erlang:22
+        entrypoint: ["/bin/sh"]
+      - image: circleci/postgres:11-alpine-ram
+        environment:
+          POSTGRES_USER: discovery
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: discovery
 
 workflows:
   build-test:
@@ -13,13 +25,14 @@ workflows:
           requires:
             - rebar3/compile
       - rebar3/ct:
+          executor: erlang_postgres
           pre-steps:
-            - setup_remote_docker
             - checkout
             - run:
                 command: |
-                  set -x
-                  docker-compose up -d
+                  wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/5.2.4/flyway-commandline-5.2.4-linux-x64.tar.gz | tar xvz && ln -s `pwd`/flyway-5.2.4/flyway /usr/local/bin
+                  /usr/local/bin/flyway -url=jdbc:postgresql://postgres:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
+
           requires:
             - rebar3/compile
       - rebar3/cover:
