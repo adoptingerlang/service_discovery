@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
-%% this module was generated on 2019-06-23T19:55:29+00:00 and should not be modified manually
+%% this module was generated on 2019-06-29T20:51:21+00:00 and should not be modified manually
 
 -module(sd_discovery_service_client).
 
@@ -42,6 +42,24 @@ get_service(Ctx, Input, Options) ->
     grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/GetService">>, Input, ?DEF(get_service_request, get_service_response, <<"sd.GetServiceRequest">>), Options).
 
 %% @doc Unary RPC
+-spec create_service(sdg_discovery_pb:create_service_request()) ->
+    {ok, sdg_discovery_pb:create_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+create_service(Input) ->
+    create_service(ctx:new(), Input, #{}).
+
+-spec create_service(ctx:t() | sdg_discovery_pb:create_service_request(), sdg_discovery_pb:create_service_request() | grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:create_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+create_service(Ctx, Input) when ?is_ctx(Ctx) ->
+    create_service(Ctx, Input, #{});
+create_service(Input, Options) ->
+    create_service(ctx:new(), Input, Options).
+
+-spec create_service(ctx:t(), sdg_discovery_pb:create_service_request(), grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:create_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+create_service(Ctx, Input, Options) ->
+    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/CreateService">>, Input, ?DEF(create_service_request, create_service_response, <<"sd.CreateServiceRequest">>), Options).
+
+%% @doc Unary RPC
 -spec list_services(sdg_discovery_pb:list_services_request()) ->
     {ok, sdg_discovery_pb:list_services_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
 list_services(Input) ->
@@ -60,20 +78,38 @@ list_services(Ctx, Input, Options) ->
     grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/ListServices">>, Input, ?DEF(list_services_request, list_services_response, <<"sd.ListServicesRequest">>), Options).
 
 %% @doc Unary RPC
--spec register_service(sdg_discovery_pb:register_service_request()) ->
-    {ok, sdg_discovery_pb:register_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
-register_service(Input) ->
-    register_service(ctx:new(), Input, #{}).
+-spec lookup_endpoints(sdg_discovery_pb:lookup_endpoints_request()) ->
+    {ok, sdg_discovery_pb:lookup_endpoints_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+lookup_endpoints(Input) ->
+    lookup_endpoints(ctx:new(), Input, #{}).
 
--spec register_service(ctx:t() | sdg_discovery_pb:register_service_request(), sdg_discovery_pb:register_service_request() | grpcbox_client:options()) ->
-    {ok, sdg_discovery_pb:register_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
-register_service(Ctx, Input) when ?is_ctx(Ctx) ->
-    register_service(Ctx, Input, #{});
-register_service(Input, Options) ->
-    register_service(ctx:new(), Input, Options).
+-spec lookup_endpoints(ctx:t() | sdg_discovery_pb:lookup_endpoints_request(), sdg_discovery_pb:lookup_endpoints_request() | grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:lookup_endpoints_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+lookup_endpoints(Ctx, Input) when ?is_ctx(Ctx) ->
+    lookup_endpoints(Ctx, Input, #{});
+lookup_endpoints(Input, Options) ->
+    lookup_endpoints(ctx:new(), Input, Options).
 
--spec register_service(ctx:t(), sdg_discovery_pb:register_service_request(), grpcbox_client:options()) ->
-    {ok, sdg_discovery_pb:register_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
-register_service(Ctx, Input, Options) ->
-    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/RegisterService">>, Input, ?DEF(register_service_request, register_service_response, <<"sd.RegisterServiceRequest">>), Options).
+-spec lookup_endpoints(ctx:t(), sdg_discovery_pb:lookup_endpoints_request(), grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:lookup_endpoints_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+lookup_endpoints(Ctx, Input, Options) ->
+    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/LookupEndpoints">>, Input, ?DEF(lookup_endpoints_request, lookup_endpoints_response, <<"sd.LookupEndpointsRequest">>), Options).
+
+%% @doc Unary RPC
+-spec register_endpoint(sdg_discovery_pb:register_endpoint_request()) ->
+    {ok, sdg_discovery_pb:register_endpoint_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+register_endpoint(Input) ->
+    register_endpoint(ctx:new(), Input, #{}).
+
+-spec register_endpoint(ctx:t() | sdg_discovery_pb:register_endpoint_request(), sdg_discovery_pb:register_endpoint_request() | grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:register_endpoint_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+register_endpoint(Ctx, Input) when ?is_ctx(Ctx) ->
+    register_endpoint(Ctx, Input, #{});
+register_endpoint(Input, Options) ->
+    register_endpoint(ctx:new(), Input, Options).
+
+-spec register_endpoint(ctx:t(), sdg_discovery_pb:register_endpoint_request(), grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:register_endpoint_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+register_endpoint(Ctx, Input, Options) ->
+    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/RegisterEndpoint">>, Input, ?DEF(register_endpoint_request, register_endpoint_response, <<"sd.RegisterEndpointRequest">>), Options).
 

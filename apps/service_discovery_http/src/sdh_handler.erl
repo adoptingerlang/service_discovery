@@ -74,7 +74,7 @@ json_encode_services(Pretty, Services) ->
 json_encode_services_([], Acc)  ->
     Acc;
 json_encode_services_([#{name := _ServiceName,
-                          attributes := _Attributes}=Service | Rest], Acc) ->
+                         attributes := _Attributes}=Service | Rest], Acc) ->
     json_encode_services_(Rest, [Service | Acc]).
 
 json_encode_endpoints(Pretty, Endpoints) ->
