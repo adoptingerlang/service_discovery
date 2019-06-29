@@ -4,19 +4,39 @@ package sd;
 
 service DiscoveryService {
   rpc GetService(GetServiceRequest) returns (GetServiceResponse);
+  rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
   rpc RegisterService(RegisterServiceRequest) returns (RegisterServiceResponse);
 }
 
-message GetServiceRequest {
+message Service {
+  string id = 1;
+  map<string, string> attributes = 2;
+  repeated Endpoint endpoints = 3;
+}
 
+message Endpoint {
+  string ip = 1;
+  int32 port = 2;
+  repeated string tags = 2;
+}
+
+message GetServiceRequest {
+  string service_id = 1;
 }
 
 message GetServiceResponse {
+  Service s = 1;
+}
 
+message ListServicesRequest {
+}
+
+message ListServicesResponse {
+  repeated Service services = 1;
 }
 
 message RegisterServiceRequest {
-
+  Service s = 1;
 }
 
 message RegisterServiceResponse {

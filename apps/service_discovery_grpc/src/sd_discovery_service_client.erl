@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
-%% this module was generated on 2019-06-23T18:36:48+00:00 and should not be modified manually
+%% this module was generated on 2019-06-23T19:55:29+00:00 and should not be modified manually
 
 -module(sd_discovery_service_client).
 
@@ -40,6 +40,24 @@ get_service(Input, Options) ->
     {ok, sdg_discovery_pb:get_service_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
 get_service(Ctx, Input, Options) ->
     grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/GetService">>, Input, ?DEF(get_service_request, get_service_response, <<"sd.GetServiceRequest">>), Options).
+
+%% @doc Unary RPC
+-spec list_services(sdg_discovery_pb:list_services_request()) ->
+    {ok, sdg_discovery_pb:list_services_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+list_services(Input) ->
+    list_services(ctx:new(), Input, #{}).
+
+-spec list_services(ctx:t() | sdg_discovery_pb:list_services_request(), sdg_discovery_pb:list_services_request() | grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:list_services_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+list_services(Ctx, Input) when ?is_ctx(Ctx) ->
+    list_services(Ctx, Input, #{});
+list_services(Input, Options) ->
+    list_services(ctx:new(), Input, Options).
+
+-spec list_services(ctx:t(), sdg_discovery_pb:list_services_request(), grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:list_services_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+list_services(Ctx, Input, Options) ->
+    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/ListServices">>, Input, ?DEF(list_services_request, list_services_response, <<"sd.ListServicesRequest">>), Options).
 
 %% @doc Unary RPC
 -spec register_service(sdg_discovery_pb:register_service_request()) ->

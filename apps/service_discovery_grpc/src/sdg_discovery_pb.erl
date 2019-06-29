@@ -51,29 +51,42 @@
 -export_type([]).
 
 %% message types
+-type service() ::
+      #{id                      => iodata(),        % = 1
+        port                    => integer()        % = 2, 32 bits
+       }.
+
 -type get_service_request() ::
-      #{
+      #{service_id              => iodata()         % = 1
        }.
 
 -type get_service_response() ::
+      #{s                       => service()        % = 1
+       }.
+
+-type list_services_request() ::
       #{
        }.
 
+-type list_services_response() ::
+      #{services                => [service()]      % = 1
+       }.
+
 -type register_service_request() ::
-      #{
+      #{s                       => service()        % = 1
        }.
 
 -type register_service_response() ::
       #{
        }.
 
--export_type(['get_service_request'/0, 'get_service_response'/0, 'register_service_request'/0, 'register_service_response'/0]).
+-export_type(['service'/0, 'get_service_request'/0, 'get_service_response'/0, 'list_services_request'/0, 'list_services_response'/0, 'register_service_request'/0, 'register_service_response'/0]).
 
--spec encode_msg(get_service_request() | get_service_response() | register_service_request() | register_service_response(), atom()) -> binary().
+-spec encode_msg(service() | get_service_request() | get_service_response() | list_services_request() | list_services_response() | register_service_request() | register_service_response(), atom()) -> binary().
 encode_msg(Msg, MsgName) when is_atom(MsgName) ->
     encode_msg(Msg, MsgName, []).
 
--spec encode_msg(get_service_request() | get_service_response() | register_service_request() | register_service_response(), atom(), list()) -> binary().
+-spec encode_msg(service() | get_service_request() | get_service_response() | list_services_request() | list_services_response() | register_service_request() | register_service_response(), atom(), list()) -> binary().
 encode_msg(Msg, MsgName, Opts) ->
     case proplists:get_bool(verify, Opts) of
       true -> verify_msg(Msg, MsgName, Opts);
@@ -81,12 +94,20 @@ encode_msg(Msg, MsgName, Opts) ->
     end,
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      service ->
+	  encode_msg_service(id(Msg, TrUserData), TrUserData);
       get_service_request ->
 	  encode_msg_get_service_request(id(Msg, TrUserData),
 					 TrUserData);
       get_service_response ->
 	  encode_msg_get_service_response(id(Msg, TrUserData),
 					  TrUserData);
+      list_services_request ->
+	  encode_msg_list_services_request(id(Msg, TrUserData),
+					   TrUserData);
+      list_services_response ->
+	  encode_msg_list_services_response(id(Msg, TrUserData),
+					    TrUserData);
       register_service_request ->
 	  encode_msg_register_service_request(id(Msg, TrUserData),
 					      TrUserData);
@@ -97,19 +118,148 @@ encode_msg(Msg, MsgName, Opts) ->
     end.
 
 
-encode_msg_get_service_request(_Msg, _TrUserData) ->
+encode_msg_service(Msg, TrUserData) ->
+    encode_msg_service(Msg, <<>>, TrUserData).
+
+
+encode_msg_service(#{} = M, Bin, TrUserData) ->
+    B1 = case M of
+	   #{id := F1} ->
+	       begin
+		 TrF1 = id(F1, TrUserData),
+		 case is_empty_string(TrF1) of
+		   true -> Bin;
+		   false ->
+		       e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+		 end
+	       end;
+	   _ -> Bin
+	 end,
+    case M of
+      #{port := F2} ->
+	  begin
+	    TrF2 = id(F2, TrUserData),
+	    if TrF2 =:= 0 -> B1;
+	       true ->
+		   e_type_int32(TrF2, <<B1/binary, 16>>, TrUserData)
+	    end
+	  end;
+      _ -> B1
+    end.
+
+encode_msg_get_service_request(Msg, TrUserData) ->
+    encode_msg_get_service_request(Msg, <<>>, TrUserData).
+
+
+encode_msg_get_service_request(#{} = M, Bin,
+			       TrUserData) ->
+    case M of
+      #{service_id := F1} ->
+	  begin
+	    TrF1 = id(F1, TrUserData),
+	    case is_empty_string(TrF1) of
+	      true -> Bin;
+	      false ->
+		  e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+	    end
+	  end;
+      _ -> Bin
+    end.
+
+encode_msg_get_service_response(Msg, TrUserData) ->
+    encode_msg_get_service_response(Msg, <<>>, TrUserData).
+
+
+encode_msg_get_service_response(#{} = M, Bin,
+				TrUserData) ->
+    case M of
+      #{s := F1} ->
+	  begin
+	    TrF1 = id(F1, TrUserData),
+	    if TrF1 =:= undefined -> Bin;
+	       true ->
+		   e_mfield_get_service_response_s(TrF1,
+						   <<Bin/binary, 10>>,
+						   TrUserData)
+	    end
+	  end;
+      _ -> Bin
+    end.
+
+encode_msg_list_services_request(_Msg, _TrUserData) ->
     <<>>.
 
-encode_msg_get_service_response(_Msg, _TrUserData) ->
-    <<>>.
+encode_msg_list_services_response(Msg, TrUserData) ->
+    encode_msg_list_services_response(Msg, <<>>,
+				      TrUserData).
 
-encode_msg_register_service_request(_Msg,
-				    _TrUserData) ->
-    <<>>.
+
+encode_msg_list_services_response(#{} = M, Bin,
+				  TrUserData) ->
+    case M of
+      #{services := F1} ->
+	  TrF1 = id(F1, TrUserData),
+	  if TrF1 == [] -> Bin;
+	     true ->
+		 e_field_list_services_response_services(TrF1, Bin,
+							 TrUserData)
+	  end;
+      _ -> Bin
+    end.
+
+encode_msg_register_service_request(Msg, TrUserData) ->
+    encode_msg_register_service_request(Msg, <<>>,
+					TrUserData).
+
+
+encode_msg_register_service_request(#{} = M, Bin,
+				    TrUserData) ->
+    case M of
+      #{s := F1} ->
+	  begin
+	    TrF1 = id(F1, TrUserData),
+	    if TrF1 =:= undefined -> Bin;
+	       true ->
+		   e_mfield_register_service_request_s(TrF1,
+						       <<Bin/binary, 10>>,
+						       TrUserData)
+	    end
+	  end;
+      _ -> Bin
+    end.
 
 encode_msg_register_service_response(_Msg,
 				     _TrUserData) ->
     <<>>.
+
+e_mfield_get_service_response_s(Msg, Bin, TrUserData) ->
+    SubBin = encode_msg_service(Msg, <<>>, TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
+
+e_mfield_list_services_response_services(Msg, Bin,
+					 TrUserData) ->
+    SubBin = encode_msg_service(Msg, <<>>, TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
+
+e_field_list_services_response_services([Elem | Rest],
+					Bin, TrUserData) ->
+    Bin2 = <<Bin/binary, 10>>,
+    Bin3 = e_mfield_list_services_response_services(id(Elem,
+						       TrUserData),
+						    Bin2, TrUserData),
+    e_field_list_services_response_services(Rest, Bin3,
+					    TrUserData);
+e_field_list_services_response_services([], Bin,
+					_TrUserData) ->
+    Bin.
+
+e_mfield_register_service_request_s(Msg, Bin,
+				    TrUserData) ->
+    SubBin = encode_msg_service(Msg, <<>>, TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
 
 -compile({nowarn_unused_function,e_type_sint/3}).
 e_type_sint(Value, Bin, _TrUserData) when Value >= 0 ->
@@ -203,6 +353,25 @@ e_varint(N, Bin) ->
     Bin2 = <<Bin/binary, (N band 127 bor 128)>>,
     e_varint(N bsr 7, Bin2).
 
+is_empty_string("") -> true;
+is_empty_string(<<>>) -> true;
+is_empty_string(L) when is_list(L) ->
+    not string_has_chars(L);
+is_empty_string(B) when is_binary(B) -> false.
+
+string_has_chars([C | _]) when is_integer(C) -> true;
+string_has_chars([H | T]) ->
+    case string_has_chars(H) of
+      true -> true;
+      false -> string_has_chars(T)
+    end;
+string_has_chars(B)
+    when is_binary(B), byte_size(B) =/= 0 ->
+    true;
+string_has_chars(C) when is_integer(C) -> true;
+string_has_chars(<<>>) -> false;
+string_has_chars([]) -> false.
+
 
 decode_msg(Bin, MsgName) when is_binary(Bin) ->
     decode_msg(Bin, MsgName, []).
@@ -225,6 +394,8 @@ decode_msg_1_catch(Bin, MsgName, TrUserData) ->
     end.
 -endif.
 
+decode_msg_2_doit(service, Bin, TrUserData) ->
+    id(decode_msg_service(Bin, TrUserData), TrUserData);
 decode_msg_2_doit(get_service_request, Bin,
 		  TrUserData) ->
     id(decode_msg_get_service_request(Bin, TrUserData),
@@ -232,6 +403,14 @@ decode_msg_2_doit(get_service_request, Bin,
 decode_msg_2_doit(get_service_response, Bin,
 		  TrUserData) ->
     id(decode_msg_get_service_response(Bin, TrUserData),
+       TrUserData);
+decode_msg_2_doit(list_services_request, Bin,
+		  TrUserData) ->
+    id(decode_msg_list_services_request(Bin, TrUserData),
+       TrUserData);
+decode_msg_2_doit(list_services_response, Bin,
+		  TrUserData) ->
+    id(decode_msg_list_services_response(Bin, TrUserData),
        TrUserData);
 decode_msg_2_doit(register_service_request, Bin,
 		  TrUserData) ->
@@ -245,248 +424,695 @@ decode_msg_2_doit(register_service_response, Bin,
 
 
 
+decode_msg_service(Bin, TrUserData) ->
+    dfp_read_field_def_service(Bin, 0, 0,
+			       id(<<>>, TrUserData), id(0, TrUserData),
+			       TrUserData).
+
+dfp_read_field_def_service(<<10, Rest/binary>>, Z1, Z2,
+			   F@_1, F@_2, TrUserData) ->
+    d_field_service_id(Rest, Z1, Z2, F@_1, F@_2,
+		       TrUserData);
+dfp_read_field_def_service(<<16, Rest/binary>>, Z1, Z2,
+			   F@_1, F@_2, TrUserData) ->
+    d_field_service_port(Rest, Z1, Z2, F@_1, F@_2,
+			 TrUserData);
+dfp_read_field_def_service(<<>>, 0, 0, F@_1, F@_2, _) ->
+    #{id => F@_1, port => F@_2};
+dfp_read_field_def_service(Other, Z1, Z2, F@_1, F@_2,
+			   TrUserData) ->
+    dg_read_field_def_service(Other, Z1, Z2, F@_1, F@_2,
+			      TrUserData).
+
+dg_read_field_def_service(<<1:1, X:7, Rest/binary>>, N,
+			  Acc, F@_1, F@_2, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_service(Rest, N + 7, X bsl N + Acc,
+			      F@_1, F@_2, TrUserData);
+dg_read_field_def_service(<<0:1, X:7, Rest/binary>>, N,
+			  Acc, F@_1, F@_2, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  d_field_service_id(Rest, 0, 0, F@_1, F@_2, TrUserData);
+      16 ->
+	  d_field_service_port(Rest, 0, 0, F@_1, F@_2,
+			       TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_service(Rest, 0, 0, F@_1, F@_2, TrUserData);
+	    1 ->
+		skip_64_service(Rest, 0, 0, F@_1, F@_2, TrUserData);
+	    2 ->
+		skip_length_delimited_service(Rest, 0, 0, F@_1, F@_2,
+					      TrUserData);
+	    3 ->
+		skip_group_service(Rest, Key bsr 3, 0, F@_1, F@_2,
+				   TrUserData);
+	    5 -> skip_32_service(Rest, 0, 0, F@_1, F@_2, TrUserData)
+	  end
+    end;
+dg_read_field_def_service(<<>>, 0, 0, F@_1, F@_2, _) ->
+    #{id => F@_1, port => F@_2}.
+
+d_field_service_id(<<1:1, X:7, Rest/binary>>, N, Acc,
+		   F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    d_field_service_id(Rest, N + 7, X bsl N + Acc, F@_1,
+		       F@_2, TrUserData);
+d_field_service_id(<<0:1, X:7, Rest/binary>>, N, Acc, _,
+		   F@_2, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_service(RestF, 0, 0, NewFValue, F@_2,
+			       TrUserData).
+
+d_field_service_port(<<1:1, X:7, Rest/binary>>, N, Acc,
+		     F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    d_field_service_port(Rest, N + 7, X bsl N + Acc, F@_1,
+			 F@_2, TrUserData);
+d_field_service_port(<<0:1, X:7, Rest/binary>>, N, Acc,
+		     F@_1, _, TrUserData) ->
+    {NewFValue, RestF} = {begin
+			    <<Res:32/signed-native>> = <<(X bsl N +
+							    Acc):32/unsigned-native>>,
+			    id(Res, TrUserData)
+			  end,
+			  Rest},
+    dfp_read_field_def_service(RestF, 0, 0, F@_1, NewFValue,
+			       TrUserData).
+
+skip_varint_service(<<1:1, _:7, Rest/binary>>, Z1, Z2,
+		    F@_1, F@_2, TrUserData) ->
+    skip_varint_service(Rest, Z1, Z2, F@_1, F@_2,
+			TrUserData);
+skip_varint_service(<<0:1, _:7, Rest/binary>>, Z1, Z2,
+		    F@_1, F@_2, TrUserData) ->
+    dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
+			       TrUserData).
+
+skip_length_delimited_service(<<1:1, X:7, Rest/binary>>,
+			      N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_service(Rest, N + 7,
+				  X bsl N + Acc, F@_1, F@_2, TrUserData);
+skip_length_delimited_service(<<0:1, X:7, Rest/binary>>,
+			      N, Acc, F@_1, F@_2, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_service(Rest2, 0, 0, F@_1, F@_2,
+			       TrUserData).
+
+skip_group_service(Bin, FNum, Z2, F@_1, F@_2,
+		   TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_service(Rest, 0, Z2, F@_1, F@_2,
+			       TrUserData).
+
+skip_32_service(<<_:32, Rest/binary>>, Z1, Z2, F@_1,
+		F@_2, TrUserData) ->
+    dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
+			       TrUserData).
+
+skip_64_service(<<_:64, Rest/binary>>, Z1, Z2, F@_1,
+		F@_2, TrUserData) ->
+    dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
+			       TrUserData).
+
 decode_msg_get_service_request(Bin, TrUserData) ->
     dfp_read_field_def_get_service_request(Bin, 0, 0,
-					   TrUserData).
+					   id(<<>>, TrUserData), TrUserData).
 
-dfp_read_field_def_get_service_request(<<>>, 0, 0, _) ->
-    #{};
+dfp_read_field_def_get_service_request(<<10,
+					 Rest/binary>>,
+				       Z1, Z2, F@_1, TrUserData) ->
+    d_field_get_service_request_service_id(Rest, Z1, Z2,
+					   F@_1, TrUserData);
+dfp_read_field_def_get_service_request(<<>>, 0, 0, F@_1,
+				       _) ->
+    #{service_id => F@_1};
 dfp_read_field_def_get_service_request(Other, Z1, Z2,
-				       TrUserData) ->
+				       F@_1, TrUserData) ->
     dg_read_field_def_get_service_request(Other, Z1, Z2,
-					  TrUserData).
+					  F@_1, TrUserData).
 
 dg_read_field_def_get_service_request(<<1:1, X:7,
 					Rest/binary>>,
-				      N, Acc, TrUserData)
+				      N, Acc, F@_1, TrUserData)
     when N < 32 - 7 ->
     dg_read_field_def_get_service_request(Rest, N + 7,
-					  X bsl N + Acc, TrUserData);
+					  X bsl N + Acc, F@_1, TrUserData);
 dg_read_field_def_get_service_request(<<0:1, X:7,
 					Rest/binary>>,
-				      N, Acc, TrUserData) ->
+				      N, Acc, F@_1, TrUserData) ->
     Key = X bsl N + Acc,
-    case Key band 7 of
-      0 ->
-	  skip_varint_get_service_request(Rest, 0, 0, TrUserData);
-      1 ->
-	  skip_64_get_service_request(Rest, 0, 0, TrUserData);
-      2 ->
-	  skip_length_delimited_get_service_request(Rest, 0, 0,
-						    TrUserData);
-      3 ->
-	  skip_group_get_service_request(Rest, Key bsr 3, 0,
-					 TrUserData);
-      5 -> skip_32_get_service_request(Rest, 0, 0, TrUserData)
+    case Key of
+      10 ->
+	  d_field_get_service_request_service_id(Rest, 0, 0, F@_1,
+						 TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_get_service_request(Rest, 0, 0, F@_1,
+						TrUserData);
+	    1 ->
+		skip_64_get_service_request(Rest, 0, 0, F@_1,
+					    TrUserData);
+	    2 ->
+		skip_length_delimited_get_service_request(Rest, 0, 0,
+							  F@_1, TrUserData);
+	    3 ->
+		skip_group_get_service_request(Rest, Key bsr 3, 0, F@_1,
+					       TrUserData);
+	    5 ->
+		skip_32_get_service_request(Rest, 0, 0, F@_1,
+					    TrUserData)
+	  end
     end;
-dg_read_field_def_get_service_request(<<>>, 0, 0, _) ->
-    #{}.
+dg_read_field_def_get_service_request(<<>>, 0, 0, F@_1,
+				      _) ->
+    #{service_id => F@_1}.
+
+d_field_get_service_request_service_id(<<1:1, X:7,
+					 Rest/binary>>,
+				       N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    d_field_get_service_request_service_id(Rest, N + 7,
+					   X bsl N + Acc, F@_1, TrUserData);
+d_field_get_service_request_service_id(<<0:1, X:7,
+					 Rest/binary>>,
+				       N, Acc, _, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_get_service_request(RestF, 0, 0,
+					   NewFValue, TrUserData).
 
 skip_varint_get_service_request(<<1:1, _:7,
 				  Rest/binary>>,
-				Z1, Z2, TrUserData) ->
-    skip_varint_get_service_request(Rest, Z1, Z2,
+				Z1, Z2, F@_1, TrUserData) ->
+    skip_varint_get_service_request(Rest, Z1, Z2, F@_1,
 				    TrUserData);
 skip_varint_get_service_request(<<0:1, _:7,
 				  Rest/binary>>,
-				Z1, Z2, TrUserData) ->
+				Z1, Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_request(Rest, Z1, Z2,
-					   TrUserData).
+					   F@_1, TrUserData).
 
 skip_length_delimited_get_service_request(<<1:1, X:7,
 					    Rest/binary>>,
-					  N, Acc, TrUserData)
+					  N, Acc, F@_1, TrUserData)
     when N < 57 ->
     skip_length_delimited_get_service_request(Rest, N + 7,
-					      X bsl N + Acc, TrUserData);
+					      X bsl N + Acc, F@_1, TrUserData);
 skip_length_delimited_get_service_request(<<0:1, X:7,
 					    Rest/binary>>,
-					  N, Acc, TrUserData) ->
+					  N, Acc, F@_1, TrUserData) ->
     Length = X bsl N + Acc,
     <<_:Length/binary, Rest2/binary>> = Rest,
     dfp_read_field_def_get_service_request(Rest2, 0, 0,
-					   TrUserData).
+					   F@_1, TrUserData).
 
-skip_group_get_service_request(Bin, FNum, Z2,
+skip_group_get_service_request(Bin, FNum, Z2, F@_1,
 			       TrUserData) ->
     {_, Rest} = read_group(Bin, FNum),
     dfp_read_field_def_get_service_request(Rest, 0, Z2,
-					   TrUserData).
+					   F@_1, TrUserData).
 
 skip_32_get_service_request(<<_:32, Rest/binary>>, Z1,
-			    Z2, TrUserData) ->
+			    Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_request(Rest, Z1, Z2,
-					   TrUserData).
+					   F@_1, TrUserData).
 
 skip_64_get_service_request(<<_:64, Rest/binary>>, Z1,
-			    Z2, TrUserData) ->
+			    Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_request(Rest, Z1, Z2,
-					   TrUserData).
+					   F@_1, TrUserData).
 
 decode_msg_get_service_response(Bin, TrUserData) ->
     dfp_read_field_def_get_service_response(Bin, 0, 0,
+					    id('$undef', TrUserData),
 					    TrUserData).
 
+dfp_read_field_def_get_service_response(<<10,
+					  Rest/binary>>,
+					Z1, Z2, F@_1, TrUserData) ->
+    d_field_get_service_response_s(Rest, Z1, Z2, F@_1,
+				   TrUserData);
 dfp_read_field_def_get_service_response(<<>>, 0, 0,
-					_) ->
-    #{};
+					F@_1, _) ->
+    S1 = #{},
+    if F@_1 == '$undef' -> S1;
+       true -> S1#{s => F@_1}
+    end;
 dfp_read_field_def_get_service_response(Other, Z1, Z2,
-					TrUserData) ->
+					F@_1, TrUserData) ->
     dg_read_field_def_get_service_response(Other, Z1, Z2,
-					   TrUserData).
+					   F@_1, TrUserData).
 
 dg_read_field_def_get_service_response(<<1:1, X:7,
 					 Rest/binary>>,
-				       N, Acc, TrUserData)
+				       N, Acc, F@_1, TrUserData)
     when N < 32 - 7 ->
     dg_read_field_def_get_service_response(Rest, N + 7,
-					   X bsl N + Acc, TrUserData);
+					   X bsl N + Acc, F@_1, TrUserData);
 dg_read_field_def_get_service_response(<<0:1, X:7,
 					 Rest/binary>>,
-				       N, Acc, TrUserData) ->
+				       N, Acc, F@_1, TrUserData) ->
     Key = X bsl N + Acc,
-    case Key band 7 of
-      0 ->
-	  skip_varint_get_service_response(Rest, 0, 0,
-					   TrUserData);
-      1 ->
-	  skip_64_get_service_response(Rest, 0, 0, TrUserData);
-      2 ->
-	  skip_length_delimited_get_service_response(Rest, 0, 0,
-						     TrUserData);
-      3 ->
-	  skip_group_get_service_response(Rest, Key bsr 3, 0,
-					  TrUserData);
-      5 ->
-	  skip_32_get_service_response(Rest, 0, 0, TrUserData)
+    case Key of
+      10 ->
+	  d_field_get_service_response_s(Rest, 0, 0, F@_1,
+					 TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_get_service_response(Rest, 0, 0, F@_1,
+						 TrUserData);
+	    1 ->
+		skip_64_get_service_response(Rest, 0, 0, F@_1,
+					     TrUserData);
+	    2 ->
+		skip_length_delimited_get_service_response(Rest, 0, 0,
+							   F@_1, TrUserData);
+	    3 ->
+		skip_group_get_service_response(Rest, Key bsr 3, 0,
+						F@_1, TrUserData);
+	    5 ->
+		skip_32_get_service_response(Rest, 0, 0, F@_1,
+					     TrUserData)
+	  end
     end;
-dg_read_field_def_get_service_response(<<>>, 0, 0, _) ->
-    #{}.
+dg_read_field_def_get_service_response(<<>>, 0, 0, F@_1,
+				       _) ->
+    S1 = #{},
+    if F@_1 == '$undef' -> S1;
+       true -> S1#{s => F@_1}
+    end.
+
+d_field_get_service_response_s(<<1:1, X:7,
+				 Rest/binary>>,
+			       N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    d_field_get_service_response_s(Rest, N + 7,
+				   X bsl N + Acc, F@_1, TrUserData);
+d_field_get_service_response_s(<<0:1, X:7,
+				 Rest/binary>>,
+			       N, Acc, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id(decode_msg_service(Bs, TrUserData), TrUserData),
+			    Rest2}
+			 end,
+    dfp_read_field_def_get_service_response(RestF, 0, 0,
+					    if Prev == '$undef' -> NewFValue;
+					       true ->
+						   merge_msg_service(Prev,
+								     NewFValue,
+								     TrUserData)
+					    end,
+					    TrUserData).
 
 skip_varint_get_service_response(<<1:1, _:7,
 				   Rest/binary>>,
-				 Z1, Z2, TrUserData) ->
-    skip_varint_get_service_response(Rest, Z1, Z2,
+				 Z1, Z2, F@_1, TrUserData) ->
+    skip_varint_get_service_response(Rest, Z1, Z2, F@_1,
 				     TrUserData);
 skip_varint_get_service_response(<<0:1, _:7,
 				   Rest/binary>>,
-				 Z1, Z2, TrUserData) ->
+				 Z1, Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_response(Rest, Z1, Z2,
-					    TrUserData).
+					    F@_1, TrUserData).
 
 skip_length_delimited_get_service_response(<<1:1, X:7,
 					     Rest/binary>>,
-					   N, Acc, TrUserData)
+					   N, Acc, F@_1, TrUserData)
     when N < 57 ->
     skip_length_delimited_get_service_response(Rest, N + 7,
-					       X bsl N + Acc, TrUserData);
+					       X bsl N + Acc, F@_1, TrUserData);
 skip_length_delimited_get_service_response(<<0:1, X:7,
 					     Rest/binary>>,
-					   N, Acc, TrUserData) ->
+					   N, Acc, F@_1, TrUserData) ->
     Length = X bsl N + Acc,
     <<_:Length/binary, Rest2/binary>> = Rest,
     dfp_read_field_def_get_service_response(Rest2, 0, 0,
-					    TrUserData).
+					    F@_1, TrUserData).
 
-skip_group_get_service_response(Bin, FNum, Z2,
+skip_group_get_service_response(Bin, FNum, Z2, F@_1,
 				TrUserData) ->
     {_, Rest} = read_group(Bin, FNum),
     dfp_read_field_def_get_service_response(Rest, 0, Z2,
-					    TrUserData).
+					    F@_1, TrUserData).
 
 skip_32_get_service_response(<<_:32, Rest/binary>>, Z1,
-			     Z2, TrUserData) ->
+			     Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_response(Rest, Z1, Z2,
-					    TrUserData).
+					    F@_1, TrUserData).
 
 skip_64_get_service_response(<<_:64, Rest/binary>>, Z1,
-			     Z2, TrUserData) ->
+			     Z2, F@_1, TrUserData) ->
     dfp_read_field_def_get_service_response(Rest, Z1, Z2,
+					    F@_1, TrUserData).
+
+decode_msg_list_services_request(Bin, TrUserData) ->
+    dfp_read_field_def_list_services_request(Bin, 0, 0,
+					     TrUserData).
+
+dfp_read_field_def_list_services_request(<<>>, 0, 0,
+					 _) ->
+    #{};
+dfp_read_field_def_list_services_request(Other, Z1, Z2,
+					 TrUserData) ->
+    dg_read_field_def_list_services_request(Other, Z1, Z2,
 					    TrUserData).
 
-decode_msg_register_service_request(Bin, TrUserData) ->
-    dfp_read_field_def_register_service_request(Bin, 0, 0,
-						TrUserData).
-
-dfp_read_field_def_register_service_request(<<>>, 0, 0,
-					    _) ->
-    #{};
-dfp_read_field_def_register_service_request(Other, Z1,
-					    Z2, TrUserData) ->
-    dg_read_field_def_register_service_request(Other, Z1,
-					       Z2, TrUserData).
-
-dg_read_field_def_register_service_request(<<1:1, X:7,
-					     Rest/binary>>,
-					   N, Acc, TrUserData)
+dg_read_field_def_list_services_request(<<1:1, X:7,
+					  Rest/binary>>,
+					N, Acc, TrUserData)
     when N < 32 - 7 ->
-    dg_read_field_def_register_service_request(Rest, N + 7,
-					       X bsl N + Acc, TrUserData);
-dg_read_field_def_register_service_request(<<0:1, X:7,
-					     Rest/binary>>,
-					   N, Acc, TrUserData) ->
+    dg_read_field_def_list_services_request(Rest, N + 7,
+					    X bsl N + Acc, TrUserData);
+dg_read_field_def_list_services_request(<<0:1, X:7,
+					  Rest/binary>>,
+					N, Acc, TrUserData) ->
     Key = X bsl N + Acc,
     case Key band 7 of
       0 ->
-	  skip_varint_register_service_request(Rest, 0, 0,
-					       TrUserData);
+	  skip_varint_list_services_request(Rest, 0, 0,
+					    TrUserData);
       1 ->
-	  skip_64_register_service_request(Rest, 0, 0,
-					   TrUserData);
+	  skip_64_list_services_request(Rest, 0, 0, TrUserData);
       2 ->
-	  skip_length_delimited_register_service_request(Rest, 0,
-							 0, TrUserData);
+	  skip_length_delimited_list_services_request(Rest, 0, 0,
+						      TrUserData);
       3 ->
-	  skip_group_register_service_request(Rest, Key bsr 3, 0,
-					      TrUserData);
+	  skip_group_list_services_request(Rest, Key bsr 3, 0,
+					   TrUserData);
       5 ->
-	  skip_32_register_service_request(Rest, 0, 0, TrUserData)
+	  skip_32_list_services_request(Rest, 0, 0, TrUserData)
+    end;
+dg_read_field_def_list_services_request(<<>>, 0, 0,
+					_) ->
+    #{}.
+
+skip_varint_list_services_request(<<1:1, _:7,
+				    Rest/binary>>,
+				  Z1, Z2, TrUserData) ->
+    skip_varint_list_services_request(Rest, Z1, Z2,
+				      TrUserData);
+skip_varint_list_services_request(<<0:1, _:7,
+				    Rest/binary>>,
+				  Z1, Z2, TrUserData) ->
+    dfp_read_field_def_list_services_request(Rest, Z1, Z2,
+					     TrUserData).
+
+skip_length_delimited_list_services_request(<<1:1, X:7,
+					      Rest/binary>>,
+					    N, Acc, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_list_services_request(Rest, N + 7,
+						X bsl N + Acc, TrUserData);
+skip_length_delimited_list_services_request(<<0:1, X:7,
+					      Rest/binary>>,
+					    N, Acc, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_list_services_request(Rest2, 0, 0,
+					     TrUserData).
+
+skip_group_list_services_request(Bin, FNum, Z2,
+				 TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_list_services_request(Rest, 0, Z2,
+					     TrUserData).
+
+skip_32_list_services_request(<<_:32, Rest/binary>>, Z1,
+			      Z2, TrUserData) ->
+    dfp_read_field_def_list_services_request(Rest, Z1, Z2,
+					     TrUserData).
+
+skip_64_list_services_request(<<_:64, Rest/binary>>, Z1,
+			      Z2, TrUserData) ->
+    dfp_read_field_def_list_services_request(Rest, Z1, Z2,
+					     TrUserData).
+
+decode_msg_list_services_response(Bin, TrUserData) ->
+    dfp_read_field_def_list_services_response(Bin, 0, 0,
+					      id([], TrUserData), TrUserData).
+
+dfp_read_field_def_list_services_response(<<10,
+					    Rest/binary>>,
+					  Z1, Z2, F@_1, TrUserData) ->
+    d_field_list_services_response_services(Rest, Z1, Z2,
+					    F@_1, TrUserData);
+dfp_read_field_def_list_services_response(<<>>, 0, 0,
+					  R1, TrUserData) ->
+    S1 = #{},
+    if R1 == '$undef' -> S1;
+       true -> S1#{services => lists_reverse(R1, TrUserData)}
+    end;
+dfp_read_field_def_list_services_response(Other, Z1, Z2,
+					  F@_1, TrUserData) ->
+    dg_read_field_def_list_services_response(Other, Z1, Z2,
+					     F@_1, TrUserData).
+
+dg_read_field_def_list_services_response(<<1:1, X:7,
+					   Rest/binary>>,
+					 N, Acc, F@_1, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_list_services_response(Rest, N + 7,
+					     X bsl N + Acc, F@_1, TrUserData);
+dg_read_field_def_list_services_response(<<0:1, X:7,
+					   Rest/binary>>,
+					 N, Acc, F@_1, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  d_field_list_services_response_services(Rest, 0, 0,
+						  F@_1, TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_list_services_response(Rest, 0, 0, F@_1,
+						   TrUserData);
+	    1 ->
+		skip_64_list_services_response(Rest, 0, 0, F@_1,
+					       TrUserData);
+	    2 ->
+		skip_length_delimited_list_services_response(Rest, 0, 0,
+							     F@_1, TrUserData);
+	    3 ->
+		skip_group_list_services_response(Rest, Key bsr 3, 0,
+						  F@_1, TrUserData);
+	    5 ->
+		skip_32_list_services_response(Rest, 0, 0, F@_1,
+					       TrUserData)
+	  end
+    end;
+dg_read_field_def_list_services_response(<<>>, 0, 0, R1,
+					 TrUserData) ->
+    S1 = #{},
+    if R1 == '$undef' -> S1;
+       true -> S1#{services => lists_reverse(R1, TrUserData)}
+    end.
+
+d_field_list_services_response_services(<<1:1, X:7,
+					  Rest/binary>>,
+					N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    d_field_list_services_response_services(Rest, N + 7,
+					    X bsl N + Acc, F@_1, TrUserData);
+d_field_list_services_response_services(<<0:1, X:7,
+					  Rest/binary>>,
+					N, Acc, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id(decode_msg_service(Bs, TrUserData), TrUserData),
+			    Rest2}
+			 end,
+    dfp_read_field_def_list_services_response(RestF, 0, 0,
+					      cons(NewFValue, Prev, TrUserData),
+					      TrUserData).
+
+skip_varint_list_services_response(<<1:1, _:7,
+				     Rest/binary>>,
+				   Z1, Z2, F@_1, TrUserData) ->
+    skip_varint_list_services_response(Rest, Z1, Z2, F@_1,
+				       TrUserData);
+skip_varint_list_services_response(<<0:1, _:7,
+				     Rest/binary>>,
+				   Z1, Z2, F@_1, TrUserData) ->
+    dfp_read_field_def_list_services_response(Rest, Z1, Z2,
+					      F@_1, TrUserData).
+
+skip_length_delimited_list_services_response(<<1:1, X:7,
+					       Rest/binary>>,
+					     N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_list_services_response(Rest,
+						 N + 7, X bsl N + Acc, F@_1,
+						 TrUserData);
+skip_length_delimited_list_services_response(<<0:1, X:7,
+					       Rest/binary>>,
+					     N, Acc, F@_1, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_list_services_response(Rest2, 0, 0,
+					      F@_1, TrUserData).
+
+skip_group_list_services_response(Bin, FNum, Z2, F@_1,
+				  TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_list_services_response(Rest, 0, Z2,
+					      F@_1, TrUserData).
+
+skip_32_list_services_response(<<_:32, Rest/binary>>,
+			       Z1, Z2, F@_1, TrUserData) ->
+    dfp_read_field_def_list_services_response(Rest, Z1, Z2,
+					      F@_1, TrUserData).
+
+skip_64_list_services_response(<<_:64, Rest/binary>>,
+			       Z1, Z2, F@_1, TrUserData) ->
+    dfp_read_field_def_list_services_response(Rest, Z1, Z2,
+					      F@_1, TrUserData).
+
+decode_msg_register_service_request(Bin, TrUserData) ->
+    dfp_read_field_def_register_service_request(Bin, 0, 0,
+						id('$undef', TrUserData),
+						TrUserData).
+
+dfp_read_field_def_register_service_request(<<10,
+					      Rest/binary>>,
+					    Z1, Z2, F@_1, TrUserData) ->
+    d_field_register_service_request_s(Rest, Z1, Z2, F@_1,
+				       TrUserData);
+dfp_read_field_def_register_service_request(<<>>, 0, 0,
+					    F@_1, _) ->
+    S1 = #{},
+    if F@_1 == '$undef' -> S1;
+       true -> S1#{s => F@_1}
+    end;
+dfp_read_field_def_register_service_request(Other, Z1,
+					    Z2, F@_1, TrUserData) ->
+    dg_read_field_def_register_service_request(Other, Z1,
+					       Z2, F@_1, TrUserData).
+
+dg_read_field_def_register_service_request(<<1:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, F@_1, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_register_service_request(Rest, N + 7,
+					       X bsl N + Acc, F@_1, TrUserData);
+dg_read_field_def_register_service_request(<<0:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, F@_1, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  d_field_register_service_request_s(Rest, 0, 0, F@_1,
+					     TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_register_service_request(Rest, 0, 0, F@_1,
+						     TrUserData);
+	    1 ->
+		skip_64_register_service_request(Rest, 0, 0, F@_1,
+						 TrUserData);
+	    2 ->
+		skip_length_delimited_register_service_request(Rest, 0,
+							       0, F@_1,
+							       TrUserData);
+	    3 ->
+		skip_group_register_service_request(Rest, Key bsr 3, 0,
+						    F@_1, TrUserData);
+	    5 ->
+		skip_32_register_service_request(Rest, 0, 0, F@_1,
+						 TrUserData)
+	  end
     end;
 dg_read_field_def_register_service_request(<<>>, 0, 0,
-					   _) ->
-    #{}.
+					   F@_1, _) ->
+    S1 = #{},
+    if F@_1 == '$undef' -> S1;
+       true -> S1#{s => F@_1}
+    end.
+
+d_field_register_service_request_s(<<1:1, X:7,
+				     Rest/binary>>,
+				   N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    d_field_register_service_request_s(Rest, N + 7,
+				       X bsl N + Acc, F@_1, TrUserData);
+d_field_register_service_request_s(<<0:1, X:7,
+				     Rest/binary>>,
+				   N, Acc, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id(decode_msg_service(Bs, TrUserData), TrUserData),
+			    Rest2}
+			 end,
+    dfp_read_field_def_register_service_request(RestF, 0, 0,
+						if Prev == '$undef' ->
+						       NewFValue;
+						   true ->
+						       merge_msg_service(Prev,
+									 NewFValue,
+									 TrUserData)
+						end,
+						TrUserData).
 
 skip_varint_register_service_request(<<1:1, _:7,
 				       Rest/binary>>,
-				     Z1, Z2, TrUserData) ->
-    skip_varint_register_service_request(Rest, Z1, Z2,
+				     Z1, Z2, F@_1, TrUserData) ->
+    skip_varint_register_service_request(Rest, Z1, Z2, F@_1,
 					 TrUserData);
 skip_varint_register_service_request(<<0:1, _:7,
 				       Rest/binary>>,
-				     Z1, Z2, TrUserData) ->
+				     Z1, Z2, F@_1, TrUserData) ->
     dfp_read_field_def_register_service_request(Rest, Z1,
-						Z2, TrUserData).
+						Z2, F@_1, TrUserData).
 
 skip_length_delimited_register_service_request(<<1:1,
 						 X:7, Rest/binary>>,
-					       N, Acc, TrUserData)
+					       N, Acc, F@_1, TrUserData)
     when N < 57 ->
     skip_length_delimited_register_service_request(Rest,
-						   N + 7, X bsl N + Acc,
+						   N + 7, X bsl N + Acc, F@_1,
 						   TrUserData);
 skip_length_delimited_register_service_request(<<0:1,
 						 X:7, Rest/binary>>,
-					       N, Acc, TrUserData) ->
+					       N, Acc, F@_1, TrUserData) ->
     Length = X bsl N + Acc,
     <<_:Length/binary, Rest2/binary>> = Rest,
     dfp_read_field_def_register_service_request(Rest2, 0, 0,
-						TrUserData).
+						F@_1, TrUserData).
 
-skip_group_register_service_request(Bin, FNum, Z2,
+skip_group_register_service_request(Bin, FNum, Z2, F@_1,
 				    TrUserData) ->
     {_, Rest} = read_group(Bin, FNum),
     dfp_read_field_def_register_service_request(Rest, 0, Z2,
-						TrUserData).
+						F@_1, TrUserData).
 
 skip_32_register_service_request(<<_:32, Rest/binary>>,
-				 Z1, Z2, TrUserData) ->
+				 Z1, Z2, F@_1, TrUserData) ->
     dfp_read_field_def_register_service_request(Rest, Z1,
-						Z2, TrUserData).
+						Z2, F@_1, TrUserData).
 
 skip_64_register_service_request(<<_:64, Rest/binary>>,
-				 Z1, Z2, TrUserData) ->
+				 Z1, Z2, F@_1, TrUserData) ->
     dfp_read_field_def_register_service_request(Rest, Z1,
-						Z2, TrUserData).
+						Z2, F@_1, TrUserData).
 
 decode_msg_register_service_response(Bin, TrUserData) ->
     dfp_read_field_def_register_service_response(Bin, 0, 0,
@@ -637,10 +1263,15 @@ merge_msgs(Prev, New, MsgName) when is_atom(MsgName) ->
 merge_msgs(Prev, New, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      service -> merge_msg_service(Prev, New, TrUserData);
       get_service_request ->
 	  merge_msg_get_service_request(Prev, New, TrUserData);
       get_service_response ->
 	  merge_msg_get_service_response(Prev, New, TrUserData);
+      list_services_request ->
+	  merge_msg_list_services_request(Prev, New, TrUserData);
+      list_services_response ->
+	  merge_msg_list_services_response(Prev, New, TrUserData);
       register_service_request ->
 	  merge_msg_register_service_request(Prev, New,
 					     TrUserData);
@@ -649,20 +1280,75 @@ merge_msgs(Prev, New, MsgName, Opts) ->
 					      TrUserData)
     end.
 
+-compile({nowarn_unused_function,merge_msg_service/3}).
+merge_msg_service(PMsg, NMsg, _) ->
+    S1 = #{},
+    S2 = case {PMsg, NMsg} of
+	   {_, #{id := NFid}} -> S1#{id => NFid};
+	   {#{id := PFid}, _} -> S1#{id => PFid};
+	   _ -> S1
+	 end,
+    case {PMsg, NMsg} of
+      {_, #{port := NFport}} -> S2#{port => NFport};
+      {#{port := PFport}, _} -> S2#{port => PFport};
+      _ -> S2
+    end.
+
 -compile({nowarn_unused_function,merge_msg_get_service_request/3}).
-merge_msg_get_service_request(_Prev, New,
-			      _TrUserData) ->
-    New.
+merge_msg_get_service_request(PMsg, NMsg, _) ->
+    S1 = #{},
+    case {PMsg, NMsg} of
+      {_, #{service_id := NFservice_id}} ->
+	  S1#{service_id => NFservice_id};
+      {#{service_id := PFservice_id}, _} ->
+	  S1#{service_id => PFservice_id};
+      _ -> S1
+    end.
 
 -compile({nowarn_unused_function,merge_msg_get_service_response/3}).
-merge_msg_get_service_response(_Prev, New,
-			       _TrUserData) ->
+merge_msg_get_service_response(PMsg, NMsg,
+			       TrUserData) ->
+    S1 = #{},
+    case {PMsg, NMsg} of
+      {#{s := PFs}, #{s := NFs}} ->
+	  S1#{s => merge_msg_service(PFs, NFs, TrUserData)};
+      {_, #{s := NFs}} -> S1#{s => NFs};
+      {#{s := PFs}, _} -> S1#{s => PFs};
+      {_, _} -> S1
+    end.
+
+-compile({nowarn_unused_function,merge_msg_list_services_request/3}).
+merge_msg_list_services_request(_Prev, New,
+				_TrUserData) ->
     New.
 
+-compile({nowarn_unused_function,merge_msg_list_services_response/3}).
+merge_msg_list_services_response(PMsg, NMsg,
+				 TrUserData) ->
+    S1 = #{},
+    case {PMsg, NMsg} of
+      {#{services := PFservices},
+       #{services := NFservices}} ->
+	  S1#{services =>
+		  'erlang_++'(PFservices, NFservices, TrUserData)};
+      {_, #{services := NFservices}} ->
+	  S1#{services => NFservices};
+      {#{services := PFservices}, _} ->
+	  S1#{services => PFservices};
+      {_, _} -> S1
+    end.
+
 -compile({nowarn_unused_function,merge_msg_register_service_request/3}).
-merge_msg_register_service_request(_Prev, New,
-				   _TrUserData) ->
-    New.
+merge_msg_register_service_request(PMsg, NMsg,
+				   TrUserData) ->
+    S1 = #{},
+    case {PMsg, NMsg} of
+      {#{s := PFs}, #{s := NFs}} ->
+	  S1#{s => merge_msg_service(PFs, NFs, TrUserData)};
+      {_, #{s := NFs}} -> S1#{s => NFs};
+      {#{s := PFs}, _} -> S1#{s => PFs};
+      {_, _} -> S1
+    end.
 
 -compile({nowarn_unused_function,merge_msg_register_service_response/3}).
 merge_msg_register_service_response(_Prev, New,
@@ -676,10 +1362,16 @@ verify_msg(Msg, MsgName) when is_atom(MsgName) ->
 verify_msg(Msg, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      service -> v_msg_service(Msg, [MsgName], TrUserData);
       get_service_request ->
 	  v_msg_get_service_request(Msg, [MsgName], TrUserData);
       get_service_response ->
 	  v_msg_get_service_response(Msg, [MsgName], TrUserData);
+      list_services_request ->
+	  v_msg_list_services_request(Msg, [MsgName], TrUserData);
+      list_services_response ->
+	  v_msg_list_services_response(Msg, [MsgName],
+				       TrUserData);
       register_service_request ->
 	  v_msg_register_service_request(Msg, [MsgName],
 					 TrUserData);
@@ -690,10 +1382,43 @@ verify_msg(Msg, MsgName, Opts) ->
     end.
 
 
+-compile({nowarn_unused_function,v_msg_service/3}).
+-dialyzer({nowarn_function,v_msg_service/3}).
+v_msg_service(#{} = M, Path, TrUserData) ->
+    case M of
+      #{id := F1} ->
+	  v_type_string(F1, [id | Path], TrUserData);
+      _ -> ok
+    end,
+    case M of
+      #{port := F2} ->
+	  v_type_int32(F2, [port | Path], TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (id) -> ok;
+		      (port) -> ok;
+		      (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_service(M, Path, _TrUserData) when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   service},
+		  M, Path);
+v_msg_service(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, service}, X, Path).
+
 -compile({nowarn_unused_function,v_msg_get_service_request/3}).
 -dialyzer({nowarn_function,v_msg_get_service_request/3}).
-v_msg_get_service_request(#{} = M, Path, _) ->
-    lists:foreach(fun (OtherKey) ->
+v_msg_get_service_request(#{} = M, Path, TrUserData) ->
+    case M of
+      #{service_id := F1} ->
+	  v_type_string(F1, [service_id | Path], TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (service_id) -> ok;
+		      (OtherKey) ->
 			  mk_type_error({extraneous_key, OtherKey}, M, Path)
 		  end,
 		  maps:keys(M)),
@@ -709,8 +1434,13 @@ v_msg_get_service_request(X, Path, _TrUserData) ->
 
 -compile({nowarn_unused_function,v_msg_get_service_response/3}).
 -dialyzer({nowarn_function,v_msg_get_service_response/3}).
-v_msg_get_service_response(#{} = M, Path, _) ->
-    lists:foreach(fun (OtherKey) ->
+v_msg_get_service_response(#{} = M, Path, TrUserData) ->
+    case M of
+      #{s := F1} -> v_msg_service(F1, [s | Path], TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (s) -> ok;
+		      (OtherKey) ->
 			  mk_type_error({extraneous_key, OtherKey}, M, Path)
 		  end,
 		  maps:keys(M)),
@@ -724,10 +1454,64 @@ v_msg_get_service_response(X, Path, _TrUserData) ->
     mk_type_error({expected_msg, get_service_response}, X,
 		  Path).
 
+-compile({nowarn_unused_function,v_msg_list_services_request/3}).
+-dialyzer({nowarn_function,v_msg_list_services_request/3}).
+v_msg_list_services_request(#{} = M, Path, _) ->
+    lists:foreach(fun (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_list_services_request(M, Path, _TrUserData)
+    when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   list_services_request},
+		  M, Path);
+v_msg_list_services_request(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, list_services_request}, X,
+		  Path).
+
+-compile({nowarn_unused_function,v_msg_list_services_response/3}).
+-dialyzer({nowarn_function,v_msg_list_services_response/3}).
+v_msg_list_services_response(#{} = M, Path,
+			     TrUserData) ->
+    case M of
+      #{services := F1} ->
+	  if is_list(F1) ->
+		 _ = [v_msg_service(Elem, [services | Path], TrUserData)
+		      || Elem <- F1],
+		 ok;
+	     true ->
+		 mk_type_error({invalid_list_of, {msg, service}}, F1,
+			       [services | Path])
+	  end;
+      _ -> ok
+    end,
+    lists:foreach(fun (services) -> ok;
+		      (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_list_services_response(M, Path, _TrUserData)
+    when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   list_services_response},
+		  M, Path);
+v_msg_list_services_response(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, list_services_response}, X,
+		  Path).
+
 -compile({nowarn_unused_function,v_msg_register_service_request/3}).
 -dialyzer({nowarn_function,v_msg_register_service_request/3}).
-v_msg_register_service_request(#{} = M, Path, _) ->
-    lists:foreach(fun (OtherKey) ->
+v_msg_register_service_request(#{} = M, Path,
+			       TrUserData) ->
+    case M of
+      #{s := F1} -> v_msg_service(F1, [s | Path], TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (s) -> ok;
+		      (OtherKey) ->
 			  mk_type_error({extraneous_key, OtherKey}, M, Path)
 		  end,
 		  maps:keys(M)),
@@ -757,6 +1541,33 @@ v_msg_register_service_response(M, Path, _TrUserData)
 v_msg_register_service_response(X, Path, _TrUserData) ->
     mk_type_error({expected_msg, register_service_response},
 		  X, Path).
+
+-compile({nowarn_unused_function,v_type_int32/3}).
+-dialyzer({nowarn_function,v_type_int32/3}).
+v_type_int32(N, _Path, _TrUserData)
+    when -2147483648 =< N, N =< 2147483647 ->
+    ok;
+v_type_int32(N, Path, _TrUserData) when is_integer(N) ->
+    mk_type_error({value_out_of_range, int32, signed, 32},
+		  N, Path);
+v_type_int32(X, Path, _TrUserData) ->
+    mk_type_error({bad_integer, int32, signed, 32}, X,
+		  Path).
+
+-compile({nowarn_unused_function,v_type_string/3}).
+-dialyzer({nowarn_function,v_type_string/3}).
+v_type_string(S, Path, _TrUserData)
+    when is_list(S); is_binary(S) ->
+    try unicode:characters_to_binary(S) of
+      B when is_binary(B) -> ok;
+      {error, _, _} ->
+	  mk_type_error(bad_unicode_string, S, Path)
+    catch
+      error:badarg ->
+	  mk_type_error(bad_unicode_string, S, Path)
+    end;
+v_type_string(X, Path, _TrUserData) ->
+    mk_type_error(bad_unicode_string, X, Path).
 
 -compile({nowarn_unused_function,mk_type_error/3}).
 -spec mk_type_error(_, _, list()) -> no_return().
@@ -799,14 +1610,33 @@ cons(Elem, Acc, _TrUserData) -> [Elem | Acc].
 'erlang_++'(A, B, _TrUserData) -> A ++ B.
 
 get_msg_defs() ->
-    [{{msg, get_service_request}, []},
-     {{msg, get_service_response}, []},
-     {{msg, register_service_request}, []},
+    [{{msg, service},
+      [#{name => id, fnum => 1, rnum => 2, type => string,
+	 occurrence => optional, opts => []},
+       #{name => port, fnum => 2, rnum => 3, type => int32,
+	 occurrence => optional, opts => []}]},
+     {{msg, get_service_request},
+      [#{name => service_id, fnum => 1, rnum => 2,
+	 type => string, occurrence => optional, opts => []}]},
+     {{msg, get_service_response},
+      [#{name => s, fnum => 1, rnum => 2,
+	 type => {msg, service}, occurrence => optional,
+	 opts => []}]},
+     {{msg, list_services_request}, []},
+     {{msg, list_services_response},
+      [#{name => services, fnum => 1, rnum => 2,
+	 type => {msg, service}, occurrence => repeated,
+	 opts => []}]},
+     {{msg, register_service_request},
+      [#{name => s, fnum => 1, rnum => 2,
+	 type => {msg, service}, occurrence => optional,
+	 opts => []}]},
      {{msg, register_service_response}, []}].
 
 
 get_msg_names() ->
-    [get_service_request, get_service_response,
+    [service, get_service_request, get_service_response,
+     list_services_request, list_services_response,
      register_service_request, register_service_response].
 
 
@@ -814,7 +1644,8 @@ get_group_names() -> [].
 
 
 get_msg_or_group_names() ->
-    [get_service_request, get_service_response,
+    [service, get_service_request, get_service_response,
+     list_services_request, list_services_response,
      register_service_request, register_service_response].
 
 
@@ -833,9 +1664,27 @@ fetch_enum_def(EnumName) ->
     erlang:error({no_such_enum, EnumName}).
 
 
-find_msg_def(get_service_request) -> [];
-find_msg_def(get_service_response) -> [];
-find_msg_def(register_service_request) -> [];
+find_msg_def(service) ->
+    [#{name => id, fnum => 1, rnum => 2, type => string,
+       occurrence => optional, opts => []},
+     #{name => port, fnum => 2, rnum => 3, type => int32,
+       occurrence => optional, opts => []}];
+find_msg_def(get_service_request) ->
+    [#{name => service_id, fnum => 1, rnum => 2,
+       type => string, occurrence => optional, opts => []}];
+find_msg_def(get_service_response) ->
+    [#{name => s, fnum => 1, rnum => 2,
+       type => {msg, service}, occurrence => optional,
+       opts => []}];
+find_msg_def(list_services_request) -> [];
+find_msg_def(list_services_response) ->
+    [#{name => services, fnum => 1, rnum => 2,
+       type => {msg, service}, occurrence => repeated,
+       opts => []}];
+find_msg_def(register_service_request) ->
+    [#{name => s, fnum => 1, rnum => 2,
+       type => {msg, service}, occurrence => optional,
+       opts => []}];
 find_msg_def(register_service_response) -> [];
 find_msg_def(_) -> error.
 
@@ -862,6 +1711,10 @@ get_service_def('sd.DiscoveryService') ->
      [#{name => 'GetService', input => get_service_request,
 	output => get_service_response, input_stream => false,
 	output_stream => false, opts => []},
+      #{name => 'ListServices',
+	input => list_services_request,
+	output => list_services_response, input_stream => false,
+	output_stream => false, opts => []},
       #{name => 'RegisterService',
 	input => register_service_request,
 	output => register_service_response,
@@ -871,7 +1724,7 @@ get_service_def(_) -> error.
 
 
 get_rpc_names('sd.DiscoveryService') ->
-    ['GetService', 'RegisterService'];
+    ['GetService', 'ListServices', 'RegisterService'];
 get_rpc_names(_) -> error.
 
 
@@ -883,6 +1736,11 @@ find_rpc_def(_, _) -> error.
 'find_rpc_def_sd.DiscoveryService'('GetService') ->
     #{name => 'GetService', input => get_service_request,
       output => get_service_response, input_stream => false,
+      output_stream => false, opts => []};
+'find_rpc_def_sd.DiscoveryService'('ListServices') ->
+    #{name => 'ListServices',
+      input => list_services_request,
+      output => list_services_response, input_stream => false,
       output_stream => false, opts => []};
 'find_rpc_def_sd.DiscoveryService'('RegisterService') ->
     #{name => 'RegisterService',
@@ -920,6 +1778,8 @@ service_name_to_fqbin(X) ->
 %% name, as atoms.
 fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"GetService">>) ->
     {'sd.DiscoveryService', 'GetService'};
+fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"ListServices">>) ->
+    {'sd.DiscoveryService', 'ListServices'};
 fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"RegisterService">>) ->
     {'sd.DiscoveryService', 'RegisterService'};
 fqbins_to_service_and_rpc_name(S, R) ->
@@ -933,21 +1793,30 @@ service_and_rpc_name_to_fqbins('sd.DiscoveryService',
 			       'GetService') ->
     {<<"sd.DiscoveryService">>, <<"GetService">>};
 service_and_rpc_name_to_fqbins('sd.DiscoveryService',
+			       'ListServices') ->
+    {<<"sd.DiscoveryService">>, <<"ListServices">>};
+service_and_rpc_name_to_fqbins('sd.DiscoveryService',
 			       'RegisterService') ->
     {<<"sd.DiscoveryService">>, <<"RegisterService">>};
 service_and_rpc_name_to_fqbins(S, R) ->
     error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
+fqbin_to_msg_name(<<"sd.Service">>) -> service;
 fqbin_to_msg_name(<<"sd.GetServiceRequest">>) -> get_service_request;
 fqbin_to_msg_name(<<"sd.GetServiceResponse">>) -> get_service_response;
+fqbin_to_msg_name(<<"sd.ListServicesRequest">>) -> list_services_request;
+fqbin_to_msg_name(<<"sd.ListServicesResponse">>) -> list_services_response;
 fqbin_to_msg_name(<<"sd.RegisterServiceRequest">>) -> register_service_request;
 fqbin_to_msg_name(<<"sd.RegisterServiceResponse">>) -> register_service_response;
 fqbin_to_msg_name(E) -> error({gpb_error, {badmsg, E}}).
 
 
+msg_name_to_fqbin(service) -> <<"sd.Service">>;
 msg_name_to_fqbin(get_service_request) -> <<"sd.GetServiceRequest">>;
 msg_name_to_fqbin(get_service_response) -> <<"sd.GetServiceResponse">>;
+msg_name_to_fqbin(list_services_request) -> <<"sd.ListServicesRequest">>;
+msg_name_to_fqbin(list_services_response) -> <<"sd.ListServicesResponse">>;
 msg_name_to_fqbin(register_service_request) -> <<"sd.RegisterServiceRequest">>;
 msg_name_to_fqbin(register_service_response) -> <<"sd.RegisterServiceResponse">>;
 msg_name_to_fqbin(E) -> error({gpb_error, {badmsg, E}}).
@@ -992,7 +1861,9 @@ get_all_proto_names() -> ["discovery"].
 
 get_msg_containment("discovery") ->
     [get_service_request, get_service_response,
-     register_service_request, register_service_response];
+     list_services_request, list_services_response,
+     register_service_request, register_service_response,
+     service];
 get_msg_containment(P) ->
     error({gpb_error, {badproto, P}}).
 
@@ -1010,6 +1881,7 @@ get_service_containment(P) ->
 
 get_rpc_containment("discovery") ->
     [{'sd.DiscoveryService', 'GetService'},
+     {'sd.DiscoveryService', 'ListServices'},
      {'sd.DiscoveryService', 'RegisterService'}];
 get_rpc_containment(P) ->
     error({gpb_error, {badproto, P}}).
@@ -1021,8 +1893,11 @@ get_enum_containment(P) ->
 
 
 get_proto_by_msg_name_as_fqbin(<<"sd.RegisterServiceRequest">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.ListServicesRequest">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.GetServiceRequest">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.Service">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.RegisterServiceResponse">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.ListServicesResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.GetServiceResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(E) ->
     error({gpb_error, {badmsg, E}}).
@@ -1046,23 +1921,91 @@ get_protos_by_pkg_name_as_fqbin(E) ->
 
 
 descriptor() ->
-    <<10, 166, 2, 10, 18, 115, 100, 47, 100, 105, 115, 99,
+    <<10, 164, 4, 10, 18, 115, 100, 47, 100, 105, 115, 99,
       111, 118, 101, 114, 121, 46, 112, 114, 111, 116, 111,
-      18, 2, 115, 100, 34, 19, 10, 17, 71, 101, 116, 83, 101,
+      18, 2, 115, 100, 34, 39, 10, 17, 71, 101, 116, 83, 101,
       114, 118, 105, 99, 101, 82, 101, 113, 117, 101, 115,
-      116, 34, 20, 10, 18, 71, 101, 116, 83, 101, 114, 118,
+      116, 18, 18, 10, 10, 115, 101, 114, 118, 105, 99, 101,
+      95, 105, 100, 24, 1, 32, 1, 40, 9, 34, 44, 10, 18, 71,
+      101, 116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115,
+      112, 111, 110, 115, 101, 18, 22, 10, 1, 115, 24, 1, 32,
+      1, 40, 11, 50, 11, 46, 115, 100, 46, 83, 101, 114, 118,
+      105, 99, 101, 34, 21, 10, 19, 76, 105, 115, 116, 83,
+      101, 114, 118, 105, 99, 101, 115, 82, 101, 113, 117,
+      101, 115, 116, 34, 53, 10, 20, 76, 105, 115, 116, 83,
+      101, 114, 118, 105, 99, 101, 115, 82, 101, 115, 112,
+      111, 110, 115, 101, 18, 29, 10, 8, 115, 101, 114, 118,
+      105, 99, 101, 115, 24, 1, 32, 3, 40, 11, 50, 11, 46,
+      115, 100, 46, 83, 101, 114, 118, 105, 99, 101, 34, 48,
+      10, 22, 82, 101, 103, 105, 115, 116, 101, 114, 83, 101,
+      114, 118, 105, 99, 101, 82, 101, 113, 117, 101, 115,
+      116, 18, 22, 10, 1, 115, 24, 1, 32, 1, 40, 11, 50, 11,
+      46, 115, 100, 46, 83, 101, 114, 118, 105, 99, 101, 34,
+      25, 10, 23, 82, 101, 103, 105, 115, 116, 101, 114, 83,
+      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
+      110, 115, 101, 34, 35, 10, 7, 83, 101, 114, 118, 105,
+      99, 101, 18, 10, 10, 2, 105, 100, 24, 1, 32, 1, 40, 9,
+      18, 12, 10, 4, 112, 111, 114, 116, 24, 2, 32, 1, 40, 5,
+      50, 234, 1, 10, 16, 68, 105, 115, 99, 111, 118, 101,
+      114, 121, 83, 101, 114, 118, 105, 99, 101, 18, 63, 10,
+      10, 71, 101, 116, 83, 101, 114, 118, 105, 99, 101, 18,
+      21, 46, 115, 100, 46, 71, 101, 116, 83, 101, 114, 118,
+      105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 26, 22,
+      46, 115, 100, 46, 71, 101, 116, 83, 101, 114, 118, 105,
+      99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0,
+      48, 0, 18, 69, 10, 12, 76, 105, 115, 116, 83, 101, 114,
+      118, 105, 99, 101, 115, 18, 23, 46, 115, 100, 46, 76,
+      105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115, 82,
+      101, 113, 117, 101, 115, 116, 26, 24, 46, 115, 100, 46,
+      76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115,
+      82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 18,
+      78, 10, 15, 82, 101, 103, 105, 115, 116, 101, 114, 83,
+      101, 114, 118, 105, 99, 101, 18, 26, 46, 115, 100, 46,
+      82, 101, 103, 105, 115, 116, 101, 114, 83, 101, 114,
+      118, 105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 26,
+      27, 46, 115, 100, 46, 82, 101, 103, 105, 115, 116, 101,
+      114, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115, 112,
+      111, 110, 115, 101, 40, 0, 48, 0, 98, 6, 112, 114, 111,
+      116, 111, 51>>.
+
+descriptor("discovery") ->
+    <<10, 18, 115, 100, 47, 100, 105, 115, 99, 111, 118,
+      101, 114, 121, 46, 112, 114, 111, 116, 111, 18, 2, 115,
+      100, 34, 39, 10, 17, 71, 101, 116, 83, 101, 114, 118,
+      105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 18, 18,
+      10, 10, 115, 101, 114, 118, 105, 99, 101, 95, 105, 100,
+      24, 1, 32, 1, 40, 9, 34, 44, 10, 18, 71, 101, 116, 83,
+      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
+      110, 115, 101, 18, 22, 10, 1, 115, 24, 1, 32, 1, 40, 11,
+      50, 11, 46, 115, 100, 46, 83, 101, 114, 118, 105, 99,
+      101, 34, 21, 10, 19, 76, 105, 115, 116, 83, 101, 114,
+      118, 105, 99, 101, 115, 82, 101, 113, 117, 101, 115,
+      116, 34, 53, 10, 20, 76, 105, 115, 116, 83, 101, 114,
+      118, 105, 99, 101, 115, 82, 101, 115, 112, 111, 110,
+      115, 101, 18, 29, 10, 8, 115, 101, 114, 118, 105, 99,
+      101, 115, 24, 1, 32, 3, 40, 11, 50, 11, 46, 115, 100,
+      46, 83, 101, 114, 118, 105, 99, 101, 34, 48, 10, 22, 82,
+      101, 103, 105, 115, 116, 101, 114, 83, 101, 114, 118,
+      105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 18, 22,
+      10, 1, 115, 24, 1, 32, 1, 40, 11, 50, 11, 46, 115, 100,
+      46, 83, 101, 114, 118, 105, 99, 101, 34, 25, 10, 23, 82,
+      101, 103, 105, 115, 116, 101, 114, 83, 101, 114, 118,
       105, 99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 34,
-      24, 10, 22, 82, 101, 103, 105, 115, 116, 101, 114, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 34, 25, 10, 23, 82, 101, 103, 105, 115, 116,
-      101, 114, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115,
-      112, 111, 110, 115, 101, 50, 163, 1, 10, 16, 68, 105,
-      115, 99, 111, 118, 101, 114, 121, 83, 101, 114, 118,
-      105, 99, 101, 18, 63, 10, 10, 71, 101, 116, 83, 101,
-      114, 118, 105, 99, 101, 18, 21, 46, 115, 100, 46, 71,
-      101, 116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 113,
-      117, 101, 115, 116, 26, 22, 46, 115, 100, 46, 71, 101,
-      116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115, 112,
+      35, 10, 7, 83, 101, 114, 118, 105, 99, 101, 18, 10, 10,
+      2, 105, 100, 24, 1, 32, 1, 40, 9, 18, 12, 10, 4, 112,
+      111, 114, 116, 24, 2, 32, 1, 40, 5, 50, 234, 1, 10, 16,
+      68, 105, 115, 99, 111, 118, 101, 114, 121, 83, 101, 114,
+      118, 105, 99, 101, 18, 63, 10, 10, 71, 101, 116, 83,
+      101, 114, 118, 105, 99, 101, 18, 21, 46, 115, 100, 46,
+      71, 101, 116, 83, 101, 114, 118, 105, 99, 101, 82, 101,
+      113, 117, 101, 115, 116, 26, 22, 46, 115, 100, 46, 71,
+      101, 116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115,
+      112, 111, 110, 115, 101, 40, 0, 48, 0, 18, 69, 10, 12,
+      76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115,
+      18, 23, 46, 115, 100, 46, 76, 105, 115, 116, 83, 101,
+      114, 118, 105, 99, 101, 115, 82, 101, 113, 117, 101,
+      115, 116, 26, 24, 46, 115, 100, 46, 76, 105, 115, 116,
+      83, 101, 114, 118, 105, 99, 101, 115, 82, 101, 115, 112,
       111, 110, 115, 101, 40, 0, 48, 0, 18, 78, 10, 15, 82,
       101, 103, 105, 115, 116, 101, 114, 83, 101, 114, 118,
       105, 99, 101, 18, 26, 46, 115, 100, 46, 82, 101, 103,
@@ -1071,34 +2014,7 @@ descriptor() ->
       100, 46, 82, 101, 103, 105, 115, 116, 101, 114, 83, 101,
       114, 118, 105, 99, 101, 82, 101, 115, 112, 111, 110,
       115, 101, 40, 0, 48, 0, 98, 6, 112, 114, 111, 116, 111,
-      51>>.
-
-descriptor("discovery") ->
-    <<10, 18, 115, 100, 47, 100, 105, 115, 99, 111, 118,
-      101, 114, 121, 46, 112, 114, 111, 116, 111, 18, 2, 115,
-      100, 34, 19, 10, 17, 71, 101, 116, 83, 101, 114, 118,
-      105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 34, 20,
-      10, 18, 71, 101, 116, 83, 101, 114, 118, 105, 99, 101,
-      82, 101, 115, 112, 111, 110, 115, 101, 34, 24, 10, 22,
-      82, 101, 103, 105, 115, 116, 101, 114, 83, 101, 114,
-      118, 105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 34,
-      25, 10, 23, 82, 101, 103, 105, 115, 116, 101, 114, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
-      110, 115, 101, 50, 163, 1, 10, 16, 68, 105, 115, 99,
-      111, 118, 101, 114, 121, 83, 101, 114, 118, 105, 99,
-      101, 18, 63, 10, 10, 71, 101, 116, 83, 101, 114, 118,
-      105, 99, 101, 18, 21, 46, 115, 100, 46, 71, 101, 116,
-      83, 101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 26, 22, 46, 115, 100, 46, 71, 101, 116, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
-      110, 115, 101, 40, 0, 48, 0, 18, 78, 10, 15, 82, 101,
-      103, 105, 115, 116, 101, 114, 83, 101, 114, 118, 105,
-      99, 101, 18, 26, 46, 115, 100, 46, 82, 101, 103, 105,
-      115, 116, 101, 114, 83, 101, 114, 118, 105, 99, 101, 82,
-      101, 113, 117, 101, 115, 116, 26, 27, 46, 115, 100, 46,
-      82, 101, 103, 105, 115, 116, 101, 114, 83, 101, 114,
-      118, 105, 99, 101, 82, 101, 115, 112, 111, 110, 115,
-      101, 40, 0, 48, 0, 98, 6, 112, 114, 111, 116, 111, 51>>;
+      51>>;
 descriptor(X) -> error({gpb_error, {badname, X}}).
 
 
