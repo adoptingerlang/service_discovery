@@ -31,10 +31,10 @@ insert(zones, #zone{name=Name,
                     authority=Authority,
                     records=Records,
                     keysets=Keysets})->
-    A = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Authority],
-    R = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Records],
-    #{command := insert} =
-        sdp_query:run(insert_zone, [Name, <<"1">>, {array, A}, {array, R}, {array, Keysets}]),
+    %% A = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Authority],
+    %% R = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Records],
+    %% #{command := insert} =
+    %%     sdp_query:run(insert_zone, [Name, <<"1">>, {array, A}, {array, R}, {array, Keysets}]),
     ok;
 insert(zones, {_N, #zone{} = Zone})->
     insert(zones, Zone);
@@ -59,21 +59,61 @@ backup_tables()->
 
 -spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
-    case sdp_query:run(select_zones, [Key]) of
-        #{command := select, rows := []} ->
+    io:format("Key ~p~n", [Key]),
+    case sdp_services_storage:read_endpoints(Key) of
+        [] ->
             [];
-        #{command := select, rows := [Row | _]} ->
-            {Name, Version, {array, _Authority}, {array, Records}, Keysets} = Row,
-            DecodedRecords = [json_to_record(jsx:decode(R)) || {jsonb, R} <- Records],
-            Authorities = lists:filter(erldns_records:match_type(?DNS_TYPE_SOA), DecodedRecords),
-            [{Name, #zone{name=Name,
-                          version=Version,
-                          authority=Authorities,
-                          record_count = length(DecodedRecords),
-                          records=DecodedRecords,
-                          records_by_name=erldns_zone_cache:build_named_index(DecodedRecords),
-                          keysets=Keysets}}]
+        Endpoints ->
+            io:format("Endpoints ~p~n", [Endpoints]),
+            Version = <<>>,
+            Authorities = [#dns_rr{name = Key,
+                                   type = ?DNS_TYPE_SOA,
+                                   ttl = 3600,
+                                   data = #dns_rrdata_soa{mname = <<"ns1.", Key/binary>>,
+                                                          rname = <<"admin.", Key/binary>>,
+                                                          serial = 2013022001,
+                                                          refresh = 86400,
+                                                          retry = 7200,
+                                                          expire = 604800,
+                                                          minimum = 300}}],
+            SrvRecord = #dns_rr{
+                           name = <<"_http._tcp.", Key/binary>>,
+                           type = ?DNS_TYPE_SRV,
+                           ttl = 3600,
+                           data = #dns_rrdata_srv{port=8080,
+                                                  target = Key,
+                                                  priority=1,
+                                                  weight=1}},
+            Records = [SrvRecord | [#dns_rr{
+                          name = Key,
+                          type = ?DNS_TYPE_A,
+                          ttl = 3600,
+                          data = #dns_rrdata_a{ip = IP}
+                         } || #{ip := IP} <- Endpoints]],
+            [{Key, #zone{name=Key,
+                         version=Version,
+                         authority=Authorities,
+                         record_count = length(Records),
+                         records=Records,
+                         records_by_name=erldns_zone_cache:build_named_index(Records),
+                         keysets=[]}}]
     end;
+
+    %% case sdp_query:run(select_zones, [Key]) of
+    %%     #{command := select, rows := []} ->
+    %%         [];
+    %%     #{command := select, rows := [Row | _]} ->
+    %%         {Name, Version, {array, _Authority}, {array, Records}, Keysets} = Row,
+    %%         DecodedRecords = [json_to_record(jsx:decode(R)) || {jsonb, R} <- Records],
+    %%         Authorities = lists:filter(erldns_records:match_type(?DNS_TYPE_SOA), DecodedRecords),
+    %%         [{Name, #zone{name=Name,
+    %%                       version=Version,
+    %%                       authority=Authorities,
+    %%                       record_count = length(DecodedRecords),
+    %%                       records=DecodedRecords,
+    %%                       records_by_name=erldns_zone_cache:build_named_index(DecodedRecords),
+    %%                       keysets=Keysets}}]
+    %% end;
 select(_Table, _Key)->
     {error, not_implemented}.
 

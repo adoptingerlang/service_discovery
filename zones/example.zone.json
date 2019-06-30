@@ -27,6 +27,34 @@
         ]
     },
     {
+        "name": "serviceA.service.sd",
+        "records": [
+            {
+                "name": "serviceA.service.sd",
+                "type": "SOA",
+                "ttl": 3600,
+                "data": {
+                    "mname": "ns1.sd",
+                    "rname": "admin.sd",
+                    "serial": 2013022001,
+                    "refresh": 86400,
+                    "retry": 7200,
+                    "expire": 604800,
+                    "minimum": 300
+                }
+            },
+            {
+                "name": "serviceA.service.sd",
+                "type": "A",
+                "ttl": 3600,
+                "data": {
+                    "ip": "1.2.3.4"
+                }
+            }
+        ]
+
+    },
+    {
         "name": "sd",
         "records": [
             {
@@ -49,14 +77,6 @@
                 "ttl": 3600,
                 "data": {
                     "txt": "\"1.0.1\""
-                }
-            },
-            {
-                "name": "serviceA.service.sd",
-                "type": "A",
-                "ttl": 3600,
-                "data": {
-                    "ip": "1.2.3.4"
                 }
             },
 

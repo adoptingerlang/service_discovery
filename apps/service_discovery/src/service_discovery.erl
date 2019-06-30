@@ -6,16 +6,25 @@
          list/0,
          register/2]).
 
--type service() :: #{name := unicode:unicode_binary(),
-                     attributes := #{unicode:unicode_binary() => unicode:unicode_binary()}}.
+-type name() :: unicode:unicode_binary().
+-type named_port() :: #{protocol := name(),
+                        port := non_neg_integer()}.
 
--type endpoint() :: #{service_name := unicode:unicode_binary(),
+-type attributes() :: #{unicode:unicode_binary() => unicode:unicode_binary()}.
+-type service() :: #{name := name(),
+                     attributes := attributes(),
+                     named_ports := #{name() => named_port()}}.
+
+-type tag() :: unicode:unicode_binary().
+-type endpoint() :: #{service_name := name(),
                       ip := inet:ip_address(),
-                      port := non_neg_integer(),
-                      tags := [unicode:unicode_binary()]}.
+                      tags := [tag()]}.
 
 -export_type([service/0,
-              endpoint/0]).
+              named_port/0,
+              endpoint/0,
+              tag/0,
+              attributes/0]).
 
 create(Service) ->
     sdp_services_storage:create(Service).

@@ -61,20 +61,24 @@ pb_from_endpoints(_ServiceName, [], Acc) ->
     Acc;
 pb_from_endpoints(ServiceName, [#{ip := IP,
                                   port := Port,
+                                  port_name := PortName,
                                   tags := Tags} | Rest], Acc) ->
     pb_from_endpoints(ServiceName, Rest, [#{service_name => ServiceName,
                                             ip => inet:ntoa(IP),
                                             port => Port,
+                                            port_name => PortName,
                                             tags => Tags} | Acc]).
 
 endpoint_from_pb(ServiceName, #{ip := IPString,
                                 port := Port,
+                                port_name := PortName,
                                 tags := Tags}) ->
     case inet:parse_address(binary_to_list(IPString)) of
         {ok, IP} ->
             {ok, #{service_name => ServiceName,
                    ip => IP,
                    port => Port,
+                   port_name => PortName,
                    tags => Tags}};
         {error, einval}=Error ->
             Error

@@ -1,10 +1,16 @@
 [
  {service_discovery, []},
 
+ {service_discovery_postgres, [{db_config, #{host => "localhost",
+                                             port => 5432,
+                                             user => "discovery",
+                                             password => "password",
+                                             database => "discovery"}}]},
+
  {erldns,
   [%% DB Config
    {storage,
-    [{type, erldns_storage_json},
+    [{type, sdp_erldns_storage},
      {dir, "db"}]},
    {servers, [
               [{name, inet_localhost_1},

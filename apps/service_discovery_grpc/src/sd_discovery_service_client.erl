@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
-%% this module was generated on 2019-06-29T20:51:21+00:00 and should not be modified manually
+%% this module was generated on 2019-06-30T17:44:54+00:00 and should not be modified manually
 
 -module(sd_discovery_service_client).
 

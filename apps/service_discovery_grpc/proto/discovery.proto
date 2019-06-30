@@ -10,16 +10,23 @@ service DiscoveryService {
   rpc RegisterEndpoint(RegisterEndpointRequest) returns (RegisterEndpointResponse);
 }
 
+message NamedPort {
+  string protocol = 2;
+  int32 port = 3;
+}
+
 message Service {
   string name = 1;
   map<string, string> attributes = 2;
+  map<string, NamedPort> named_ports = 2;
 }
 
 message Endpoint {
   string service_name = 1;
   string ip = 2;
   int32 port = 3;
-  repeated string tags = 4;
+  string port_name = 4;
+  repeated string tags = 5;
 }
 
 message GetServiceRequest {

@@ -55,14 +55,23 @@ read_endpoints(ServiceName) ->
             {error, Reason}
     end.
 
-service_from_row({Name, Attributes}) ->
+service_from_row({Name, Attributes, NamedPorts}) ->
     #{name => Name,
-      attributes => Attributes}.
+      attributes => Attributes,
+      named_ports => named_ports_from_rows(NamedPorts)}.
 
-endpoint_from_row(ServiceName, {IP, Port, Tags}) ->
+named_ports_from_rows(NamedPorts) ->
+    named_ports_from_rows(NamedPorts, #{}).
+
+named_ports_from_rows([], Acc) ->
+    Acc;
+named_ports_from_rows([{_, Protocol, Name, Port} | H], Acc) ->
+    named_ports_from_rows(H, Acc#{Name => #{protocol => Protocol,
+                                            port => Port}}).
+
+endpoint_from_row(ServiceName, {IP, Tags}) ->
     #{service_name => ServiceName,
       ip => IP,
-      port => Port,
       tags => Tags}.
 
 service_to_row(#{name := Name,
@@ -70,6 +79,5 @@ service_to_row(#{name := Name,
     [Name, Attributes].
 
 endpoint_to_row(ServiceName, #{ip := IP,
-                               port := Port,
                                tags := Tags}) ->
-    [ServiceName, IP, Port, Tags].
+    [ServiceName, IP, Tags].
