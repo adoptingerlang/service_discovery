@@ -1,16 +1,18 @@
-CREATE EXTENSION hstore;
+CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE named_ports
     (
-        service_name TEXT,
+        service_id UUID NOT NULL,
         protocol TEXT,
         port_name TEXT,
         port INT2,
-        PRIMARY KEY (service_name, port_name)
+        PRIMARY KEY (service_id, port_name)
     );
 
 CREATE TABLE services
     (
+        id UUID NOT NULL DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         attributes HSTORE NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -20,12 +22,12 @@ CREATE TABLE services
 
 CREATE TABLE endpoints
     (
-        service_name TEXT NOT NULL,
+        service_id UUID NOT NULL,
         ip INET NOT NULL,
         tags TEXT[] NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (service_name, ip)
+        PRIMARY KEY (service_id, ip)
     );
 
 CREATE INDEX idx_service_attributes ON services USING GIN(attributes);
