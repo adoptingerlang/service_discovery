@@ -4,7 +4,7 @@
          register/2,
          list/0,
          read/1,
-         read_service_endpoints/1,
+         read_service_and_endpoints/1,
          read_endpoints/1]).
 
 -spec create(service_discovery:service()) -> ok | {error, term()}.
@@ -47,9 +47,10 @@ list() ->
             {error, Reason}
     end.
 
--spec read_service_endpoints(unicode:unicode_binary()) -> {service_discovery:service(),
-                                                           [service_discovery:endpoint()]} | {error, term()}.
-read_service_endpoints(ServiceName) ->
+-spec read_service_and_endpoints(unicode:unicode_binary()) -> {service_discovery:service(),
+                                                               [service_discovery:endpoint()]} |
+                                                              {error, term()}.
+read_service_and_endpoints(ServiceName) ->
     case sdp_query:run(select_endpoints, [ServiceName]) of
         #{rows := Rows} ->
             [endpoint_from_row(ServiceName, Row) || Row <- Rows];
