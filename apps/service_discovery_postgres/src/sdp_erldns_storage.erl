@@ -60,7 +60,7 @@ backup_tables()->
 -spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
     io:format("Key ~p~n", [Key]),
-    case sdp_services_storage:read_endpoints(Key) of
+    case sdp_services_storage:read_service_endpoints(Key) of
         [] ->
             [];
         Endpoints ->
