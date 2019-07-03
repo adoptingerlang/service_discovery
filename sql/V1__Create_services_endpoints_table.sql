@@ -14,9 +14,10 @@ CREATE TABLE services
 CREATE TABLE named_ports
     (
         service_id UUID NOT NULL REFERENCES services (id) ON DELETE CASCADE,
-        port_name TEXT,
-        protocol TEXT,
-        port INT2,
+        port_name TEXT NOT NULL,
+        protocol TEXT NOT NULL,
+        port INT2 NOT NULL,
+        CHECK (port > 0 AND port < 65536),
         PRIMARY KEY (service_id, port_name)
     );
 
