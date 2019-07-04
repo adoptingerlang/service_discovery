@@ -25,16 +25,25 @@ handle('PUT',[<<"service">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
     case create_service(DecodedBody) of
-        ok ->
-            {ok, [], <<>>};
         {error, Reason} ->
-            {400, [], io_lib:format("error: ~p", [Reason])}
+            {400, [], io_lib:format("error: ~p", [Reason])};
+        ServiceId ->
+            {ok, [], uuid:uuid_to_string(ServiceId, binary_standard)}
     end;
 
 handle('GET',[<<"service">>, ServiceName, <<"endpoints">>], Req) ->
     Endpoints = service_discovery:lookup_endpoints(ServiceName),
     EndpointsJson = json_encode_endpoints(is_pretty(Req), Endpoints),
     {ok, [?CONTENT_TYPE_JSON], EndpointsJson};
+handle('PUT',[<<"service">>, ServiceName, <<"port">>], Req) ->
+    Body = elli_request:body(Req),
+    DecodedBody = jsx:decode(Body, [return_maps]),
+    case add_named_port(ServiceName, DecodedBody) of
+        ok ->
+            {ok, [], <<>>};
+        {error, Reason} ->
+            {400, [], io_lib:format("error: ~p", [Reason])}
+    end;
 handle('PUT',[<<"service">>, ServiceName, <<"register">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
@@ -130,6 +139,7 @@ service_from_json(#{<<"name">> := Name,
 service_from_json(_) ->
     {error, bad_service_json}.
 
+-spec named_ports_from_json(map()) -> service_discovery:named_ports().
 named_ports_from_json(Map) ->
     maps:fold(fun(K, #{<<"protocol">> := Protocol,
                        <<"port">> := Port}, Acc) ->
@@ -137,7 +147,15 @@ named_ports_from_json(Map) ->
                                   port => Port}}
               end, #{}, Map).
 
-register_service(ServiceName, Json)->
+add_named_port(ServiceName, Json) ->
+    case named_ports_from_json(Json) of
+        {ok, NamedPorts} ->
+            service_discovery:add_named_port(ServiceName, NamedPorts);
+        {error, _Reason}=Error ->
+            Error
+    end.
+
+register_service(ServiceName, Json) ->
     case endpoint_from_json(ServiceName, Json) of
         {ok, Endpoint} ->
             service_discovery:register(ServiceName, Endpoint);
@@ -159,3 +177,4 @@ endpoint_from_json(ServiceName, #{<<"ip">> := IPString,
     end;
 endpoint_from_json(_, _) ->
     {error, bad_endpoint_json}.
+

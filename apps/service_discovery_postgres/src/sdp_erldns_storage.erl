@@ -17,6 +17,17 @@
          empty_table/1,
          list_table/1]).
 
+-define(SOA(Key), [#dns_rr{name = Key,
+                           type = ?DNS_TYPE_SOA,
+                           ttl = 3600,
+                           data = #dns_rrdata_soa{mname = <<"ns1.", Key/binary>>,
+                                                  rname = <<"admin.", Key/binary>>,
+                                                  serial = 2013022001,
+                                                  refresh = 86400,
+                                                  retry = 7200,
+                                                  expire = 604800,
+                                                  minimum = 300}}]).
+
 -spec create(atom()) -> ok.
 create(schema) ->
     ok;
@@ -26,20 +37,8 @@ create(authorities) ->
     ok.
 
 -spec insert(atom(), any()) -> any().
-insert(zones, #zone{name=Name,
-                    version=_Version,
-                    authority=Authority,
-                    records=Records,
-                    keysets=Keysets})->
-    %% A = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Authority],
-    %% R = [jsx:encode(erldns_zone_encoder:encode_record_json(Record)) || Record <- Records],
-    %% #{command := insert} =
-    %%     sdp_query:run(insert_zone, [Name, <<"1">>, {array, A}, {array, R}, {array, Keysets}]),
-    ok;
-insert(zones, {_N, #zone{} = Zone})->
-    insert(zones, Zone);
-insert(authorities, #authorities{} = _Auth) ->
-    {error, not_implemented}.
+insert(_, _) ->
+    ok.
 
 -spec delete_table(atom()) -> ok | {aborted, any()}.
 delete_table(_Table) ->
@@ -59,37 +58,16 @@ backup_tables()->
 
 -spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
-    io:format("Key ~p~n", [Key]),
-    case sdp_services_storage:read_service_endpoints(Key) of
-        [] ->
-            [];
-        Endpoints ->
-            io:format("Endpoints ~p~n", [Endpoints]),
+    Service = string:split(Key, ".", all) -- [<<"svc">>, <<"cluster">>, <<"local">>],
+    case sdp_services_storage:read(Service) of
+        {error, not_found}->
+           [];
+        #{named_ports := NamedPorts,
+         endpoints := Endpoints} ->
             Version = <<>>,
-            Authorities = [#dns_rr{name = Key,
-                                   type = ?DNS_TYPE_SOA,
-                                   ttl = 3600,
-                                   data = #dns_rrdata_soa{mname = <<"ns1.", Key/binary>>,
-                                                          rname = <<"admin.", Key/binary>>,
-                                                          serial = 2013022001,
-                                                          refresh = 86400,
-                                                          retry = 7200,
-                                                          expire = 604800,
-                                                          minimum = 300}}],
-            SrvRecord = #dns_rr{
-                           name = <<"_http._tcp.", Key/binary>>,
-                           type = ?DNS_TYPE_SRV,
-                           ttl = 3600,
-                           data = #dns_rrdata_srv{port=8080,
-                                                  target = Key,
-                                                  priority=1,
-                                                  weight=1}},
-            Records = [SrvRecord | [#dns_rr{
-                          name = Key,
-                          type = ?DNS_TYPE_A,
-                          ttl = 3600,
-                          data = #dns_rrdata_a{ip = IP}
-                         } || #{ip := IP} <- Endpoints]],
+            Authorities = ?SOA(Key),
+            SrvRecords = named_ports_to_srv_records(Key, NamedPorts),
+            Records = SrvRecords ++ endpoints_to_a_records(Key, Endpoints),
             [{Key, #zone{name=Key,
                          version=Version,
                          authority=Authorities,
@@ -98,22 +76,6 @@ select(zones, Key)->
                          records_by_name=erldns_zone_cache:build_named_index(Records),
                          keysets=[]}}]
     end;
-
-    %% case sdp_query:run(select_zones, [Key]) of
-    %%     #{command := select, rows := []} ->
-    %%         [];
-    %%     #{command := select, rows := [Row | _]} ->
-    %%         {Name, Version, {array, _Authority}, {array, Records}, Keysets} = Row,
-    %%         DecodedRecords = [json_to_record(jsx:decode(R)) || {jsonb, R} <- Records],
-    %%         Authorities = lists:filter(erldns_records:match_type(?DNS_TYPE_SOA), DecodedRecords),
-    %%         [{Name, #zone{name=Name,
-    %%                       version=Version,
-    %%                       authority=Authorities,
-    %%                       record_count = length(DecodedRecords),
-    %%                       records=DecodedRecords,
-    %%                       records_by_name=erldns_zone_cache:build_named_index(DecodedRecords),
-    %%                       keysets=Keysets}}]
-    %% end;
 select(_Table, _Key)->
     {error, not_implemented}.
 
@@ -140,15 +102,23 @@ list_table(_Name) ->
 
 %%
 
-json_to_record(Record) ->
-    List = json_record_to_list(Record),
-    erldns_zone_parser:json_record_to_erlang(List).
+named_ports_to_srv_records(Key, NamedPorts) ->
+    maps:fold(fun(PortName, #{protocol := Protocol,
+                              port := Port}, Acc) ->
+                  [#dns_rr{name = <<"_", PortName/binary, "._", Protocol/binary, ".", Key/binary>>,
+                           type = ?DNS_TYPE_SRV,
+                           ttl = 3600,
+                           data = #dns_rrdata_srv{port=Port,
+                                                  target = Key,
+                                                  priority=1,
+                                                  weight=1}} | Acc]
+              end, [], NamedPorts).
 
-json_record_to_list(JsonRecord) ->
-  [
-   erldns_config:keyget(<<"name">>, JsonRecord),
-   erldns_config:keyget(<<"type">>, JsonRecord),
-   erldns_config:keyget(<<"ttl">>, JsonRecord),
-   erldns_config:keyget(<<"content">>, JsonRecord),
-   erldns_config:keyget(<<"context">>, JsonRecord)
-  ].
+endpoints_to_a_records(Key, Endpoints) ->
+    [#dns_rr{
+        name = Key,
+        type = ?DNS_TYPE_A,
+        ttl = 3600,
+        data = #dns_rrdata_a{ip = IP}
+       } || #{ip := IP} <- Endpoints].
+

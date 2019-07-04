@@ -25,5 +25,4 @@ load_sql() ->
 load_sql(PrivDir, File) ->
     SqlFile = filename:join([PrivDir, "sql", File]),
     {ok, Queries} = eql:compile(SqlFile),
-    io:format("Queries ~p ~p~n", [PrivDir, File]),
     [persistent_term:put({?MODULE, Name}, Query) || {Name, Query} <- Queries].
