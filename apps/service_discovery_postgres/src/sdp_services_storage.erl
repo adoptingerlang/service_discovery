@@ -98,7 +98,7 @@ named_ports_from_rows(NamedPorts) ->
 
 named_ports_from_rows([], Acc) ->
     Acc;
-named_ports_from_rows([{_, Protocol, Name, Port} | H], Acc) ->
+named_ports_from_rows([{_, Name, Protocol, Port} | H], Acc) ->
     named_ports_from_rows(H, Acc#{Name => #{protocol => Protocol,
                                             port => Port}}).
 

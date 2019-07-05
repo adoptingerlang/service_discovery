@@ -149,10 +149,10 @@ named_ports_from_json(Map) ->
 
 add_named_port(ServiceName, Json) ->
     case named_ports_from_json(Json) of
-        {ok, NamedPorts} ->
-            service_discovery:add_named_port(ServiceName, NamedPorts);
         {error, _Reason}=Error ->
-            Error
+            Error;
+        NamedPorts ->
+            service_discovery:add_named_ports(ServiceName, NamedPorts)
     end.
 
 register_service(ServiceName, Json) ->

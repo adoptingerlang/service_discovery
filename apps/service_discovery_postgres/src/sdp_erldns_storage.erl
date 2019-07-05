@@ -63,7 +63,7 @@ select(zones, Key)->
         {error, not_found}->
            [];
         #{named_ports := NamedPorts,
-         endpoints := Endpoints} ->
+          endpoints := Endpoints} ->
             Version = <<>>,
             Authorities = ?SOA(Key),
             SrvRecords = named_ports_to_srv_records(Key, NamedPorts),
