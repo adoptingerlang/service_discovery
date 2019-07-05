@@ -6,11 +6,13 @@ service DiscoveryService {
   rpc GetService(GetServiceRequest) returns (GetServiceResponse);
   rpc CreateService(CreateServiceRequest) returns (CreateServiceResponse);
   rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
+  rpc AddNamedPorts(AddNamedPortsRequest) returns (AddNamedPortsResponse);
   rpc LookupEndpoints(LookupEndpointsRequest) returns (LookupEndpointsResponse);
   rpc RegisterEndpoint(RegisterEndpointRequest) returns (RegisterEndpointResponse);
 }
 
 message NamedPort {
+  string name = 1;
   string protocol = 2;
   int32 port = 3;
 }
@@ -18,14 +20,12 @@ message NamedPort {
 message Service {
   string name = 1;
   map<string, string> attributes = 2;
-  map<string, NamedPort> named_ports = 2;
+  map<string, NamedPort> named_ports = 3;
 }
 
 message Endpoint {
   string service_name = 1;
   string ip = 2;
-  int32 port = 3;
-  string port_name = 4;
   repeated string tags = 5;
 }
 
@@ -52,6 +52,13 @@ message ListServicesResponse {
   repeated Service services = 1;
 }
 
+message AddNamedPortsRequest {
+  string service_name = 1;
+  map<string, NamedPort> named_ports = 2;
+}
+
+message AddNamedPortsResponse {
+}
 
 message LookupEndpointsRequest {
   string service_name = 1;

@@ -54,7 +54,7 @@ read(ServiceName) ->
 list() ->
     case sdp_query:run(select_all_services, []) of
         #{rows := Rows} ->
-            [service_from_row(Row) || Row <- Rows];
+            [base_service_from_row(Row) || Row <- Rows];
         {error, Reason} ->
             {error, Reason}
     end.
@@ -80,6 +80,10 @@ read_endpoints(ServiceName) ->
     end.
 
 %%
+
+base_service_from_row({Name, Attributes}) ->
+    #{name => Name,
+      attributes => Attributes}.
 
 service_from_row({Name, Attributes, NamedPorts, Endpoints}) ->
     #{name => Name,

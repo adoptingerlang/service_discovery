@@ -35,10 +35,10 @@ handle('GET',[<<"service">>, ServiceName, <<"endpoints">>], Req) ->
     Endpoints = service_discovery:lookup_endpoints(ServiceName),
     EndpointsJson = json_encode_endpoints(is_pretty(Req), Endpoints),
     {ok, [?CONTENT_TYPE_JSON], EndpointsJson};
-handle('PUT',[<<"service">>, ServiceName, <<"port">>], Req) ->
+handle('PUT',[<<"service">>, ServiceName, <<"ports">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
-    case add_named_port(ServiceName, DecodedBody) of
+    case add_named_ports(ServiceName, DecodedBody) of
         ok ->
             {ok, [], <<>>};
         {error, Reason} ->
@@ -85,8 +85,7 @@ json_encode_services(Pretty, Services) ->
 json_encode_services_([], Acc)  ->
     Acc;
 json_encode_services_([#{name := _ServiceName,
-                         attributes := _Attributes,
-                         named_ports := _NamedPorts}=Service | Rest], Acc) ->
+                         attributes := _Attributes}=Service | Rest], Acc) ->
     json_encode_services_(Rest, [Service | Acc]).
 
 -spec json_encode_endpoints(boolean(), [service_discovery:endpoints()]) -> binary().
@@ -147,13 +146,8 @@ named_ports_from_json(Map) ->
                                   port => Port}}
               end, #{}, Map).
 
-add_named_port(ServiceName, Json) ->
-    case named_ports_from_json(Json) of
-        {error, _Reason}=Error ->
-            Error;
-        NamedPorts ->
-            service_discovery:add_named_ports(ServiceName, NamedPorts)
-    end.
+add_named_ports(ServiceName, Json) ->
+    service_discovery:add_named_ports(ServiceName, named_ports_from_json(Json)).
 
 register_service(ServiceName, Json) ->
     case endpoint_from_json(ServiceName, Json) of

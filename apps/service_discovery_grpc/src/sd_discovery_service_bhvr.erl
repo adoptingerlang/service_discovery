@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
-%% this module was generated on 2019-06-30T17:44:54+00:00 and should not be modified manually
+%% this module was generated on 2019-07-05T14:33:23+00:00 and should not be modified manually
 
 -module(sd_discovery_service_bhvr).
 
@@ -18,6 +18,10 @@
 %% @doc Unary RPC
 -callback list_services(ctx:ctx(), sdg_discovery_pb:list_services_request()) ->
     {ok, sdg_discovery_pb:list_services_response(), ctx:ctx()} | grpcbox_stream:grpc_error_response().
+
+%% @doc Unary RPC
+-callback add_named_ports(ctx:ctx(), sdg_discovery_pb:add_named_ports_request()) ->
+    {ok, sdg_discovery_pb:add_named_ports_response(), ctx:ctx()} | grpcbox_stream:grpc_error_response().
 
 %% @doc Unary RPC
 -callback lookup_endpoints(ctx:ctx(), sdg_discovery_pb:lookup_endpoints_request()) ->

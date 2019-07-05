@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
-%% this module was generated on 2019-06-30T17:44:54+00:00 and should not be modified manually
+%% this module was generated on 2019-07-05T14:33:23+00:00 and should not be modified manually
 
 -module(sd_discovery_service_client).
 
@@ -76,6 +76,24 @@ list_services(Input, Options) ->
     {ok, sdg_discovery_pb:list_services_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
 list_services(Ctx, Input, Options) ->
     grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/ListServices">>, Input, ?DEF(list_services_request, list_services_response, <<"sd.ListServicesRequest">>), Options).
+
+%% @doc Unary RPC
+-spec add_named_ports(sdg_discovery_pb:add_named_ports_request()) ->
+    {ok, sdg_discovery_pb:add_named_ports_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+add_named_ports(Input) ->
+    add_named_ports(ctx:new(), Input, #{}).
+
+-spec add_named_ports(ctx:t() | sdg_discovery_pb:add_named_ports_request(), sdg_discovery_pb:add_named_ports_request() | grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:add_named_ports_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+add_named_ports(Ctx, Input) when ?is_ctx(Ctx) ->
+    add_named_ports(Ctx, Input, #{});
+add_named_ports(Input, Options) ->
+    add_named_ports(ctx:new(), Input, Options).
+
+-spec add_named_ports(ctx:t(), sdg_discovery_pb:add_named_ports_request(), grpcbox_client:options()) ->
+    {ok, sdg_discovery_pb:add_named_ports_response(), grpcbox:metadata()} | grpcbox_stream:grpc_error_response().
+add_named_ports(Ctx, Input, Options) ->
+    grpcbox_client:unary(Ctx, <<"/sd.DiscoveryService/AddNamedPorts">>, Input, ?DEF(add_named_ports_request, add_named_ports_response, <<"sd.AddNamedPortsRequest">>), Options).
 
 %% @doc Unary RPC
 -spec lookup_endpoints(sdg_discovery_pb:lookup_endpoints_request()) ->

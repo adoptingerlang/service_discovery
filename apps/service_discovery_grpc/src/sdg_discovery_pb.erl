@@ -51,9 +51,16 @@
 -export_type([]).
 
 %% message types
+-type named_port() ::
+      #{name                    => iodata(),        % = 1
+        protocol                => iodata(),        % = 2
+        port                    => integer()        % = 3, 32 bits
+       }.
+
 -type service() ::
       #{name                    => iodata(),        % = 1
-        attributes              => #{iodata() := iodata()} % = 2
+        attributes              => #{iodata() := iodata()}, % = 2
+        named_ports             => #{iodata() := named_port()} % = 3
        }.
 
 -type endpoint() ::
@@ -88,6 +95,15 @@
       #{services                => [service()]      % = 1
        }.
 
+-type add_named_ports_request() ::
+      #{service_name            => iodata(),        % = 1
+        named_ports             => #{iodata() := named_port()} % = 2
+       }.
+
+-type add_named_ports_response() ::
+      #{
+       }.
+
 -type lookup_endpoints_request() ::
       #{service_name            => iodata()         % = 1
        }.
@@ -105,13 +121,13 @@
       #{
        }.
 
--export_type(['service'/0, 'endpoint'/0, 'get_service_request'/0, 'get_service_response'/0, 'create_service_request'/0, 'create_service_response'/0, 'list_services_request'/0, 'list_services_response'/0, 'lookup_endpoints_request'/0, 'lookup_endpoints_response'/0, 'register_endpoint_request'/0, 'register_endpoint_response'/0]).
+-export_type(['named_port'/0, 'service'/0, 'endpoint'/0, 'get_service_request'/0, 'get_service_response'/0, 'create_service_request'/0, 'create_service_response'/0, 'list_services_request'/0, 'list_services_response'/0, 'add_named_ports_request'/0, 'add_named_ports_response'/0, 'lookup_endpoints_request'/0, 'lookup_endpoints_response'/0, 'register_endpoint_request'/0, 'register_endpoint_response'/0]).
 
--spec encode_msg(service() | endpoint() | get_service_request() | get_service_response() | create_service_request() | create_service_response() | list_services_request() | list_services_response() | lookup_endpoints_request() | lookup_endpoints_response() | register_endpoint_request() | register_endpoint_response(), atom()) -> binary().
+-spec encode_msg(named_port() | service() | endpoint() | get_service_request() | get_service_response() | create_service_request() | create_service_response() | list_services_request() | list_services_response() | add_named_ports_request() | add_named_ports_response() | lookup_endpoints_request() | lookup_endpoints_response() | register_endpoint_request() | register_endpoint_response(), atom()) -> binary().
 encode_msg(Msg, MsgName) when is_atom(MsgName) ->
     encode_msg(Msg, MsgName, []).
 
--spec encode_msg(service() | endpoint() | get_service_request() | get_service_response() | create_service_request() | create_service_response() | list_services_request() | list_services_response() | lookup_endpoints_request() | lookup_endpoints_response() | register_endpoint_request() | register_endpoint_response(), atom(), list()) -> binary().
+-spec encode_msg(named_port() | service() | endpoint() | get_service_request() | get_service_response() | create_service_request() | create_service_response() | list_services_request() | list_services_response() | add_named_ports_request() | add_named_ports_response() | lookup_endpoints_request() | lookup_endpoints_response() | register_endpoint_request() | register_endpoint_response(), atom(), list()) -> binary().
 encode_msg(Msg, MsgName, Opts) ->
     case proplists:get_bool(verify, Opts) of
       true -> verify_msg(Msg, MsgName, Opts);
@@ -119,6 +135,8 @@ encode_msg(Msg, MsgName, Opts) ->
     end,
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      named_port ->
+	  encode_msg_named_port(id(Msg, TrUserData), TrUserData);
       service ->
 	  encode_msg_service(id(Msg, TrUserData), TrUserData);
       endpoint ->
@@ -141,6 +159,12 @@ encode_msg(Msg, MsgName, Opts) ->
       list_services_response ->
 	  encode_msg_list_services_response(id(Msg, TrUserData),
 					    TrUserData);
+      add_named_ports_request ->
+	  encode_msg_add_named_ports_request(id(Msg, TrUserData),
+					     TrUserData);
+      add_named_ports_response ->
+	  encode_msg_add_named_ports_response(id(Msg, TrUserData),
+					      TrUserData);
       lookup_endpoints_request ->
 	  encode_msg_lookup_endpoints_request(id(Msg, TrUserData),
 					      TrUserData);
@@ -159,6 +183,47 @@ encode_msg(Msg, MsgName, Opts) ->
     end.
 
 
+encode_msg_named_port(Msg, TrUserData) ->
+    encode_msg_named_port(Msg, <<>>, TrUserData).
+
+
+encode_msg_named_port(#{} = M, Bin, TrUserData) ->
+    B1 = case M of
+	   #{name := F1} ->
+	       begin
+		 TrF1 = id(F1, TrUserData),
+		 case is_empty_string(TrF1) of
+		   true -> Bin;
+		   false ->
+		       e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+		 end
+	       end;
+	   _ -> Bin
+	 end,
+    B2 = case M of
+	   #{protocol := F2} ->
+	       begin
+		 TrF2 = id(F2, TrUserData),
+		 case is_empty_string(TrF2) of
+		   true -> B1;
+		   false ->
+		       e_type_string(TrF2, <<B1/binary, 18>>, TrUserData)
+		 end
+	       end;
+	   _ -> B1
+	 end,
+    case M of
+      #{port := F3} ->
+	  begin
+	    TrF3 = id(F3, TrUserData),
+	    if TrF3 =:= 0 -> B2;
+	       true ->
+		   e_type_int32(TrF3, <<B2/binary, 24>>, TrUserData)
+	    end
+	  end;
+      _ -> B2
+    end.
+
 encode_msg_service(Msg, TrUserData) ->
     encode_msg_service(Msg, <<>>, TrUserData).
 
@@ -176,13 +241,22 @@ encode_msg_service(#{} = M, Bin, TrUserData) ->
 	       end;
 	   _ -> Bin
 	 end,
+    B2 = case M of
+	   #{attributes := F2} ->
+	       TrF2 = 'tr_encode_service.attributes'(F2, TrUserData),
+	       if TrF2 == [] -> B1;
+		  true -> e_field_service_attributes(TrF2, B1, TrUserData)
+	       end;
+	   _ -> B1
+	 end,
     case M of
-      #{attributes := F2} ->
-	  TrF2 = 'tr_encode_service.attributes'(F2, TrUserData),
-	  if TrF2 == [] -> B1;
-	     true -> e_field_service_attributes(TrF2, B1, TrUserData)
+      #{named_ports := F3} ->
+	  TrF3 = 'tr_encode_service.named_ports'(F3, TrUserData),
+	  if TrF3 == [] -> B2;
+	     true ->
+		 e_field_service_named_ports(TrF3, B2, TrUserData)
 	  end;
-      _ -> B1
+      _ -> B2
     end.
 
 encode_msg_endpoint(Msg, TrUserData) ->
@@ -330,6 +404,42 @@ encode_msg_list_services_response(#{} = M, Bin,
       _ -> Bin
     end.
 
+encode_msg_add_named_ports_request(Msg, TrUserData) ->
+    encode_msg_add_named_ports_request(Msg, <<>>,
+				       TrUserData).
+
+
+encode_msg_add_named_ports_request(#{} = M, Bin,
+				   TrUserData) ->
+    B1 = case M of
+	   #{service_name := F1} ->
+	       begin
+		 TrF1 = id(F1, TrUserData),
+		 case is_empty_string(TrF1) of
+		   true -> Bin;
+		   false ->
+		       e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+		 end
+	       end;
+	   _ -> Bin
+	 end,
+    case M of
+      #{named_ports := F2} ->
+	  TrF2 =
+	      'tr_encode_add_named_ports_request.named_ports'(F2,
+							      TrUserData),
+	  if TrF2 == [] -> B1;
+	     true ->
+		 e_field_add_named_ports_request_named_ports(TrF2, B1,
+							     TrUserData)
+	  end;
+      _ -> B1
+    end.
+
+encode_msg_add_named_ports_response(_Msg,
+				    _TrUserData) ->
+    <<>>.
+
 encode_msg_lookup_endpoints_request(Msg, TrUserData) ->
     encode_msg_lookup_endpoints_request(Msg, <<>>,
 					TrUserData).
@@ -422,6 +532,23 @@ e_field_service_attributes([Elem | Rest], Bin,
     e_field_service_attributes(Rest, Bin3, TrUserData);
 e_field_service_attributes([], Bin, _TrUserData) -> Bin.
 
+e_mfield_service_named_ports(Msg, Bin, TrUserData) ->
+    SubBin = 'encode_msg_map<string,named_port>'(Msg, <<>>,
+						 TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
+
+e_field_service_named_ports([Elem | Rest], Bin,
+			    TrUserData) ->
+    Bin2 = <<Bin/binary, 26>>,
+    Bin3 =
+	e_mfield_service_named_ports('tr_encode_service.named_ports[x]'(Elem,
+									TrUserData),
+				     Bin2, TrUserData),
+    e_field_service_named_ports(Rest, Bin3, TrUserData);
+e_field_service_named_ports([], Bin, _TrUserData) ->
+    Bin.
+
 e_field_endpoint_tags([Elem | Rest], Bin, TrUserData) ->
     Bin2 = <<Bin/binary, 42>>,
     Bin3 = e_type_string(id(Elem, TrUserData), Bin2,
@@ -459,6 +586,27 @@ e_field_list_services_response_services([], Bin,
 					_TrUserData) ->
     Bin.
 
+e_mfield_add_named_ports_request_named_ports(Msg, Bin,
+					     TrUserData) ->
+    SubBin = 'encode_msg_map<string,named_port>'(Msg, <<>>,
+						 TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
+
+e_field_add_named_ports_request_named_ports([Elem
+					     | Rest],
+					    Bin, TrUserData) ->
+    Bin2 = <<Bin/binary, 18>>,
+    Bin3 =
+	e_mfield_add_named_ports_request_named_ports('tr_encode_add_named_ports_request.named_ports[x]'(Elem,
+													TrUserData),
+						     Bin2, TrUserData),
+    e_field_add_named_ports_request_named_ports(Rest, Bin3,
+						TrUserData);
+e_field_add_named_ports_request_named_ports([], Bin,
+					    _TrUserData) ->
+    Bin.
+
 e_mfield_lookup_endpoints_response_endpoints(Msg, Bin,
 					     TrUserData) ->
     SubBin = encode_msg_endpoint(Msg, <<>>, TrUserData),
@@ -485,6 +633,19 @@ e_mfield_register_endpoint_request_endpoint(Msg, Bin,
     Bin2 = e_varint(byte_size(SubBin), Bin),
     <<Bin2/binary, SubBin/binary>>.
 
+'encode_msg_map<string,named_port>'(#{key := F1,
+				      value := F2},
+				    Bin, TrUserData) ->
+    B1 = begin
+	   TrF1 = id(F1, TrUserData),
+	   e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+	 end,
+    begin
+      TrF2 = id(F2, TrUserData),
+      'e_mfield_map<string,named_port>_value'(TrF2,
+					      <<B1/binary, 18>>, TrUserData)
+    end.
+
 'encode_msg_map<string,string>'(#{key := F1,
 				  value := F2},
 				Bin, TrUserData) ->
@@ -496,6 +657,12 @@ e_mfield_register_endpoint_request_endpoint(Msg, Bin,
       TrF2 = id(F2, TrUserData),
       e_type_string(TrF2, <<B1/binary, 18>>, TrUserData)
     end.
+
+'e_mfield_map<string,named_port>_value'(Msg, Bin,
+					TrUserData) ->
+    SubBin = encode_msg_named_port(Msg, <<>>, TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
 
 -compile({nowarn_unused_function,e_type_sint/3}).
 e_type_sint(Value, Bin, _TrUserData) when Value >= 0 ->
@@ -630,6 +797,8 @@ decode_msg_1_catch(Bin, MsgName, TrUserData) ->
     end.
 -endif.
 
+decode_msg_2_doit(named_port, Bin, TrUserData) ->
+    id(decode_msg_named_port(Bin, TrUserData), TrUserData);
 decode_msg_2_doit(service, Bin, TrUserData) ->
     id(decode_msg_service(Bin, TrUserData), TrUserData);
 decode_msg_2_doit(endpoint, Bin, TrUserData) ->
@@ -658,6 +827,14 @@ decode_msg_2_doit(list_services_response, Bin,
 		  TrUserData) ->
     id(decode_msg_list_services_response(Bin, TrUserData),
        TrUserData);
+decode_msg_2_doit(add_named_ports_request, Bin,
+		  TrUserData) ->
+    id(decode_msg_add_named_ports_request(Bin, TrUserData),
+       TrUserData);
+decode_msg_2_doit(add_named_ports_response, Bin,
+		  TrUserData) ->
+    id(decode_msg_add_named_ports_response(Bin, TrUserData),
+       TrUserData);
 decode_msg_2_doit(lookup_endpoints_request, Bin,
 		  TrUserData) ->
     id(decode_msg_lookup_endpoints_request(Bin, TrUserData),
@@ -680,91 +857,262 @@ decode_msg_2_doit(register_endpoint_response, Bin,
 
 
 
+decode_msg_named_port(Bin, TrUserData) ->
+    dfp_read_field_def_named_port(Bin, 0, 0,
+				  id(<<>>, TrUserData), id(<<>>, TrUserData),
+				  id(0, TrUserData), TrUserData).
+
+dfp_read_field_def_named_port(<<10, Rest/binary>>, Z1,
+			      Z2, F@_1, F@_2, F@_3, TrUserData) ->
+    d_field_named_port_name(Rest, Z1, Z2, F@_1, F@_2, F@_3,
+			    TrUserData);
+dfp_read_field_def_named_port(<<18, Rest/binary>>, Z1,
+			      Z2, F@_1, F@_2, F@_3, TrUserData) ->
+    d_field_named_port_protocol(Rest, Z1, Z2, F@_1, F@_2,
+				F@_3, TrUserData);
+dfp_read_field_def_named_port(<<24, Rest/binary>>, Z1,
+			      Z2, F@_1, F@_2, F@_3, TrUserData) ->
+    d_field_named_port_port(Rest, Z1, Z2, F@_1, F@_2, F@_3,
+			    TrUserData);
+dfp_read_field_def_named_port(<<>>, 0, 0, F@_1, F@_2,
+			      F@_3, _) ->
+    #{name => F@_1, protocol => F@_2, port => F@_3};
+dfp_read_field_def_named_port(Other, Z1, Z2, F@_1, F@_2,
+			      F@_3, TrUserData) ->
+    dg_read_field_def_named_port(Other, Z1, Z2, F@_1, F@_2,
+				 F@_3, TrUserData).
+
+dg_read_field_def_named_port(<<1:1, X:7, Rest/binary>>,
+			     N, Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_named_port(Rest, N + 7, X bsl N + Acc,
+				 F@_1, F@_2, F@_3, TrUserData);
+dg_read_field_def_named_port(<<0:1, X:7, Rest/binary>>,
+			     N, Acc, F@_1, F@_2, F@_3, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  d_field_named_port_name(Rest, 0, 0, F@_1, F@_2, F@_3,
+				  TrUserData);
+      18 ->
+	  d_field_named_port_protocol(Rest, 0, 0, F@_1, F@_2,
+				      F@_3, TrUserData);
+      24 ->
+	  d_field_named_port_port(Rest, 0, 0, F@_1, F@_2, F@_3,
+				  TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_named_port(Rest, 0, 0, F@_1, F@_2, F@_3,
+				       TrUserData);
+	    1 ->
+		skip_64_named_port(Rest, 0, 0, F@_1, F@_2, F@_3,
+				   TrUserData);
+	    2 ->
+		skip_length_delimited_named_port(Rest, 0, 0, F@_1, F@_2,
+						 F@_3, TrUserData);
+	    3 ->
+		skip_group_named_port(Rest, Key bsr 3, 0, F@_1, F@_2,
+				      F@_3, TrUserData);
+	    5 ->
+		skip_32_named_port(Rest, 0, 0, F@_1, F@_2, F@_3,
+				   TrUserData)
+	  end
+    end;
+dg_read_field_def_named_port(<<>>, 0, 0, F@_1, F@_2,
+			     F@_3, _) ->
+    #{name => F@_1, protocol => F@_2, port => F@_3}.
+
+d_field_named_port_name(<<1:1, X:7, Rest/binary>>, N,
+			Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 57 ->
+    d_field_named_port_name(Rest, N + 7, X bsl N + Acc,
+			    F@_1, F@_2, F@_3, TrUserData);
+d_field_named_port_name(<<0:1, X:7, Rest/binary>>, N,
+			Acc, _, F@_2, F@_3, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_named_port(RestF, 0, 0, NewFValue,
+				  F@_2, F@_3, TrUserData).
+
+d_field_named_port_protocol(<<1:1, X:7, Rest/binary>>,
+			    N, Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 57 ->
+    d_field_named_port_protocol(Rest, N + 7, X bsl N + Acc,
+				F@_1, F@_2, F@_3, TrUserData);
+d_field_named_port_protocol(<<0:1, X:7, Rest/binary>>,
+			    N, Acc, F@_1, _, F@_3, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_named_port(RestF, 0, 0, F@_1,
+				  NewFValue, F@_3, TrUserData).
+
+d_field_named_port_port(<<1:1, X:7, Rest/binary>>, N,
+			Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 57 ->
+    d_field_named_port_port(Rest, N + 7, X bsl N + Acc,
+			    F@_1, F@_2, F@_3, TrUserData);
+d_field_named_port_port(<<0:1, X:7, Rest/binary>>, N,
+			Acc, F@_1, F@_2, _, TrUserData) ->
+    {NewFValue, RestF} = {begin
+			    <<Res:32/signed-native>> = <<(X bsl N +
+							    Acc):32/unsigned-native>>,
+			    id(Res, TrUserData)
+			  end,
+			  Rest},
+    dfp_read_field_def_named_port(RestF, 0, 0, F@_1, F@_2,
+				  NewFValue, TrUserData).
+
+skip_varint_named_port(<<1:1, _:7, Rest/binary>>, Z1,
+		       Z2, F@_1, F@_2, F@_3, TrUserData) ->
+    skip_varint_named_port(Rest, Z1, Z2, F@_1, F@_2, F@_3,
+			   TrUserData);
+skip_varint_named_port(<<0:1, _:7, Rest/binary>>, Z1,
+		       Z2, F@_1, F@_2, F@_3, TrUserData) ->
+    dfp_read_field_def_named_port(Rest, Z1, Z2, F@_1, F@_2,
+				  F@_3, TrUserData).
+
+skip_length_delimited_named_port(<<1:1, X:7,
+				   Rest/binary>>,
+				 N, Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_named_port(Rest, N + 7,
+				     X bsl N + Acc, F@_1, F@_2, F@_3,
+				     TrUserData);
+skip_length_delimited_named_port(<<0:1, X:7,
+				   Rest/binary>>,
+				 N, Acc, F@_1, F@_2, F@_3, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_named_port(Rest2, 0, 0, F@_1, F@_2,
+				  F@_3, TrUserData).
+
+skip_group_named_port(Bin, FNum, Z2, F@_1, F@_2, F@_3,
+		      TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_named_port(Rest, 0, Z2, F@_1, F@_2,
+				  F@_3, TrUserData).
+
+skip_32_named_port(<<_:32, Rest/binary>>, Z1, Z2, F@_1,
+		   F@_2, F@_3, TrUserData) ->
+    dfp_read_field_def_named_port(Rest, Z1, Z2, F@_1, F@_2,
+				  F@_3, TrUserData).
+
+skip_64_named_port(<<_:64, Rest/binary>>, Z1, Z2, F@_1,
+		   F@_2, F@_3, TrUserData) ->
+    dfp_read_field_def_named_port(Rest, Z1, Z2, F@_1, F@_2,
+				  F@_3, TrUserData).
+
 decode_msg_service(Bin, TrUserData) ->
     dfp_read_field_def_service(Bin, 0, 0,
 			       id(<<>>, TrUserData),
 			       'tr_decode_init_default_service.attributes'([],
 									   TrUserData),
+			       'tr_decode_init_default_service.named_ports'([],
+									    TrUserData),
 			       TrUserData).
 
 dfp_read_field_def_service(<<10, Rest/binary>>, Z1, Z2,
-			   F@_1, F@_2, TrUserData) ->
-    d_field_service_name(Rest, Z1, Z2, F@_1, F@_2,
+			   F@_1, F@_2, F@_3, TrUserData) ->
+    d_field_service_name(Rest, Z1, Z2, F@_1, F@_2, F@_3,
 			 TrUserData);
 dfp_read_field_def_service(<<18, Rest/binary>>, Z1, Z2,
-			   F@_1, F@_2, TrUserData) ->
+			   F@_1, F@_2, F@_3, TrUserData) ->
     d_field_service_attributes(Rest, Z1, Z2, F@_1, F@_2,
-			       TrUserData);
-dfp_read_field_def_service(<<>>, 0, 0, F@_1, R1,
+			       F@_3, TrUserData);
+dfp_read_field_def_service(<<26, Rest/binary>>, Z1, Z2,
+			   F@_1, F@_2, F@_3, TrUserData) ->
+    d_field_service_named_ports(Rest, Z1, Z2, F@_1, F@_2,
+				F@_3, TrUserData);
+dfp_read_field_def_service(<<>>, 0, 0, F@_1, R1, R2,
 			   TrUserData) ->
     #{name => F@_1,
       attributes =>
 	  'tr_decode_repeated_finalize_service.attributes'(R1,
-							   TrUserData)};
+							   TrUserData),
+      named_ports =>
+	  'tr_decode_repeated_finalize_service.named_ports'(R2,
+							    TrUserData)};
 dfp_read_field_def_service(Other, Z1, Z2, F@_1, F@_2,
-			   TrUserData) ->
+			   F@_3, TrUserData) ->
     dg_read_field_def_service(Other, Z1, Z2, F@_1, F@_2,
-			      TrUserData).
+			      F@_3, TrUserData).
 
 dg_read_field_def_service(<<1:1, X:7, Rest/binary>>, N,
-			  Acc, F@_1, F@_2, TrUserData)
+			  Acc, F@_1, F@_2, F@_3, TrUserData)
     when N < 32 - 7 ->
     dg_read_field_def_service(Rest, N + 7, X bsl N + Acc,
-			      F@_1, F@_2, TrUserData);
+			      F@_1, F@_2, F@_3, TrUserData);
 dg_read_field_def_service(<<0:1, X:7, Rest/binary>>, N,
-			  Acc, F@_1, F@_2, TrUserData) ->
+			  Acc, F@_1, F@_2, F@_3, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
       10 ->
-	  d_field_service_name(Rest, 0, 0, F@_1, F@_2,
+	  d_field_service_name(Rest, 0, 0, F@_1, F@_2, F@_3,
 			       TrUserData);
       18 ->
-	  d_field_service_attributes(Rest, 0, 0, F@_1, F@_2,
+	  d_field_service_attributes(Rest, 0, 0, F@_1, F@_2, F@_3,
 				     TrUserData);
+      26 ->
+	  d_field_service_named_ports(Rest, 0, 0, F@_1, F@_2,
+				      F@_3, TrUserData);
       _ ->
 	  case Key band 7 of
 	    0 ->
-		skip_varint_service(Rest, 0, 0, F@_1, F@_2, TrUserData);
+		skip_varint_service(Rest, 0, 0, F@_1, F@_2, F@_3,
+				    TrUserData);
 	    1 ->
-		skip_64_service(Rest, 0, 0, F@_1, F@_2, TrUserData);
+		skip_64_service(Rest, 0, 0, F@_1, F@_2, F@_3,
+				TrUserData);
 	    2 ->
 		skip_length_delimited_service(Rest, 0, 0, F@_1, F@_2,
-					      TrUserData);
+					      F@_3, TrUserData);
 	    3 ->
-		skip_group_service(Rest, Key bsr 3, 0, F@_1, F@_2,
+		skip_group_service(Rest, Key bsr 3, 0, F@_1, F@_2, F@_3,
 				   TrUserData);
-	    5 -> skip_32_service(Rest, 0, 0, F@_1, F@_2, TrUserData)
+	    5 ->
+		skip_32_service(Rest, 0, 0, F@_1, F@_2, F@_3,
+				TrUserData)
 	  end
     end;
-dg_read_field_def_service(<<>>, 0, 0, F@_1, R1,
+dg_read_field_def_service(<<>>, 0, 0, F@_1, R1, R2,
 			  TrUserData) ->
     #{name => F@_1,
       attributes =>
 	  'tr_decode_repeated_finalize_service.attributes'(R1,
-							   TrUserData)}.
+							   TrUserData),
+      named_ports =>
+	  'tr_decode_repeated_finalize_service.named_ports'(R2,
+							    TrUserData)}.
 
 d_field_service_name(<<1:1, X:7, Rest/binary>>, N, Acc,
-		     F@_1, F@_2, TrUserData)
+		     F@_1, F@_2, F@_3, TrUserData)
     when N < 57 ->
     d_field_service_name(Rest, N + 7, X bsl N + Acc, F@_1,
-			 F@_2, TrUserData);
+			 F@_2, F@_3, TrUserData);
 d_field_service_name(<<0:1, X:7, Rest/binary>>, N, Acc,
-		     _, F@_2, TrUserData) ->
+		     _, F@_2, F@_3, TrUserData) ->
     {NewFValue, RestF} = begin
 			   Len = X bsl N + Acc,
 			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
 			   {id(binary:copy(Bytes), TrUserData), Rest2}
 			 end,
     dfp_read_field_def_service(RestF, 0, 0, NewFValue, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
 d_field_service_attributes(<<1:1, X:7, Rest/binary>>, N,
-			   Acc, F@_1, F@_2, TrUserData)
+			   Acc, F@_1, F@_2, F@_3, TrUserData)
     when N < 57 ->
     d_field_service_attributes(Rest, N + 7, X bsl N + Acc,
-			       F@_1, F@_2, TrUserData);
+			       F@_1, F@_2, F@_3, TrUserData);
 d_field_service_attributes(<<0:1, X:7, Rest/binary>>, N,
-			   Acc, F@_1, Prev, TrUserData) ->
+			   Acc, F@_1, Prev, F@_3, TrUserData) ->
     {NewFValue, RestF} = begin
 			   Len = X bsl N + Acc,
 			   <<Bs:Len/binary, Rest2/binary>> = Rest,
@@ -776,44 +1124,65 @@ d_field_service_attributes(<<0:1, X:7, Rest/binary>>, N,
 			       'tr_decode_repeated_add_elem_service.attributes'(NewFValue,
 										Prev,
 										TrUserData),
+			       F@_3, TrUserData).
+
+d_field_service_named_ports(<<1:1, X:7, Rest/binary>>,
+			    N, Acc, F@_1, F@_2, F@_3, TrUserData)
+    when N < 57 ->
+    d_field_service_named_ports(Rest, N + 7, X bsl N + Acc,
+				F@_1, F@_2, F@_3, TrUserData);
+d_field_service_named_ports(<<0:1, X:7, Rest/binary>>,
+			    N, Acc, F@_1, F@_2, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id('decode_msg_map<string,named_port>'(Bs,
+								   TrUserData),
+			       TrUserData),
+			    Rest2}
+			 end,
+    dfp_read_field_def_service(RestF, 0, 0, F@_1, F@_2,
+			       'tr_decode_repeated_add_elem_service.named_ports'(NewFValue,
+										 Prev,
+										 TrUserData),
 			       TrUserData).
 
 skip_varint_service(<<1:1, _:7, Rest/binary>>, Z1, Z2,
-		    F@_1, F@_2, TrUserData) ->
-    skip_varint_service(Rest, Z1, Z2, F@_1, F@_2,
+		    F@_1, F@_2, F@_3, TrUserData) ->
+    skip_varint_service(Rest, Z1, Z2, F@_1, F@_2, F@_3,
 			TrUserData);
 skip_varint_service(<<0:1, _:7, Rest/binary>>, Z1, Z2,
-		    F@_1, F@_2, TrUserData) ->
+		    F@_1, F@_2, F@_3, TrUserData) ->
     dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
 skip_length_delimited_service(<<1:1, X:7, Rest/binary>>,
-			      N, Acc, F@_1, F@_2, TrUserData)
+			      N, Acc, F@_1, F@_2, F@_3, TrUserData)
     when N < 57 ->
     skip_length_delimited_service(Rest, N + 7,
-				  X bsl N + Acc, F@_1, F@_2, TrUserData);
+				  X bsl N + Acc, F@_1, F@_2, F@_3, TrUserData);
 skip_length_delimited_service(<<0:1, X:7, Rest/binary>>,
-			      N, Acc, F@_1, F@_2, TrUserData) ->
+			      N, Acc, F@_1, F@_2, F@_3, TrUserData) ->
     Length = X bsl N + Acc,
     <<_:Length/binary, Rest2/binary>> = Rest,
     dfp_read_field_def_service(Rest2, 0, 0, F@_1, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
-skip_group_service(Bin, FNum, Z2, F@_1, F@_2,
+skip_group_service(Bin, FNum, Z2, F@_1, F@_2, F@_3,
 		   TrUserData) ->
     {_, Rest} = read_group(Bin, FNum),
     dfp_read_field_def_service(Rest, 0, Z2, F@_1, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
 skip_32_service(<<_:32, Rest/binary>>, Z1, Z2, F@_1,
-		F@_2, TrUserData) ->
+		F@_2, F@_3, TrUserData) ->
     dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
 skip_64_service(<<_:64, Rest/binary>>, Z1, Z2, F@_1,
-		F@_2, TrUserData) ->
+		F@_2, F@_3, TrUserData) ->
     dfp_read_field_def_service(Rest, Z1, Z2, F@_1, F@_2,
-			       TrUserData).
+			       F@_3, TrUserData).
 
 decode_msg_endpoint(Bin, TrUserData) ->
     dfp_read_field_def_endpoint(Bin, 0, 0,
@@ -1670,6 +2039,248 @@ skip_64_list_services_response(<<_:64, Rest/binary>>,
     dfp_read_field_def_list_services_response(Rest, Z1, Z2,
 					      F@_1, TrUserData).
 
+decode_msg_add_named_ports_request(Bin, TrUserData) ->
+    dfp_read_field_def_add_named_ports_request(Bin, 0, 0,
+					       id(<<>>, TrUserData),
+					       'tr_decode_init_default_add_named_ports_request.named_ports'([],
+													    TrUserData),
+					       TrUserData).
+
+dfp_read_field_def_add_named_ports_request(<<10,
+					     Rest/binary>>,
+					   Z1, Z2, F@_1, F@_2, TrUserData) ->
+    d_field_add_named_ports_request_service_name(Rest, Z1,
+						 Z2, F@_1, F@_2, TrUserData);
+dfp_read_field_def_add_named_ports_request(<<18,
+					     Rest/binary>>,
+					   Z1, Z2, F@_1, F@_2, TrUserData) ->
+    d_field_add_named_ports_request_named_ports(Rest, Z1,
+						Z2, F@_1, F@_2, TrUserData);
+dfp_read_field_def_add_named_ports_request(<<>>, 0, 0,
+					   F@_1, R1, TrUserData) ->
+    #{service_name => F@_1,
+      named_ports =>
+	  'tr_decode_repeated_finalize_add_named_ports_request.named_ports'(R1,
+									    TrUserData)};
+dfp_read_field_def_add_named_ports_request(Other, Z1,
+					   Z2, F@_1, F@_2, TrUserData) ->
+    dg_read_field_def_add_named_ports_request(Other, Z1, Z2,
+					      F@_1, F@_2, TrUserData).
+
+dg_read_field_def_add_named_ports_request(<<1:1, X:7,
+					    Rest/binary>>,
+					  N, Acc, F@_1, F@_2, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_add_named_ports_request(Rest, N + 7,
+					      X bsl N + Acc, F@_1, F@_2,
+					      TrUserData);
+dg_read_field_def_add_named_ports_request(<<0:1, X:7,
+					    Rest/binary>>,
+					  N, Acc, F@_1, F@_2, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  d_field_add_named_ports_request_service_name(Rest, 0, 0,
+						       F@_1, F@_2, TrUserData);
+      18 ->
+	  d_field_add_named_ports_request_named_ports(Rest, 0, 0,
+						      F@_1, F@_2, TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_add_named_ports_request(Rest, 0, 0, F@_1,
+						    F@_2, TrUserData);
+	    1 ->
+		skip_64_add_named_ports_request(Rest, 0, 0, F@_1, F@_2,
+						TrUserData);
+	    2 ->
+		skip_length_delimited_add_named_ports_request(Rest, 0,
+							      0, F@_1, F@_2,
+							      TrUserData);
+	    3 ->
+		skip_group_add_named_ports_request(Rest, Key bsr 3, 0,
+						   F@_1, F@_2, TrUserData);
+	    5 ->
+		skip_32_add_named_ports_request(Rest, 0, 0, F@_1, F@_2,
+						TrUserData)
+	  end
+    end;
+dg_read_field_def_add_named_ports_request(<<>>, 0, 0,
+					  F@_1, R1, TrUserData) ->
+    #{service_name => F@_1,
+      named_ports =>
+	  'tr_decode_repeated_finalize_add_named_ports_request.named_ports'(R1,
+									    TrUserData)}.
+
+d_field_add_named_ports_request_service_name(<<1:1, X:7,
+					       Rest/binary>>,
+					     N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    d_field_add_named_ports_request_service_name(Rest,
+						 N + 7, X bsl N + Acc, F@_1,
+						 F@_2, TrUserData);
+d_field_add_named_ports_request_service_name(<<0:1, X:7,
+					       Rest/binary>>,
+					     N, Acc, _, F@_2, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_add_named_ports_request(RestF, 0, 0,
+					       NewFValue, F@_2, TrUserData).
+
+d_field_add_named_ports_request_named_ports(<<1:1, X:7,
+					      Rest/binary>>,
+					    N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    d_field_add_named_ports_request_named_ports(Rest, N + 7,
+						X bsl N + Acc, F@_1, F@_2,
+						TrUserData);
+d_field_add_named_ports_request_named_ports(<<0:1, X:7,
+					      Rest/binary>>,
+					    N, Acc, F@_1, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id('decode_msg_map<string,named_port>'(Bs,
+								   TrUserData),
+			       TrUserData),
+			    Rest2}
+			 end,
+    dfp_read_field_def_add_named_ports_request(RestF, 0, 0,
+					       F@_1,
+					       'tr_decode_repeated_add_elem_add_named_ports_request.named_ports'(NewFValue,
+														 Prev,
+														 TrUserData),
+					       TrUserData).
+
+skip_varint_add_named_ports_request(<<1:1, _:7,
+				      Rest/binary>>,
+				    Z1, Z2, F@_1, F@_2, TrUserData) ->
+    skip_varint_add_named_ports_request(Rest, Z1, Z2, F@_1,
+					F@_2, TrUserData);
+skip_varint_add_named_ports_request(<<0:1, _:7,
+				      Rest/binary>>,
+				    Z1, Z2, F@_1, F@_2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_request(Rest, Z1, Z2,
+					       F@_1, F@_2, TrUserData).
+
+skip_length_delimited_add_named_ports_request(<<1:1,
+						X:7, Rest/binary>>,
+					      N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_add_named_ports_request(Rest,
+						  N + 7, X bsl N + Acc, F@_1,
+						  F@_2, TrUserData);
+skip_length_delimited_add_named_ports_request(<<0:1,
+						X:7, Rest/binary>>,
+					      N, Acc, F@_1, F@_2, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_add_named_ports_request(Rest2, 0, 0,
+					       F@_1, F@_2, TrUserData).
+
+skip_group_add_named_ports_request(Bin, FNum, Z2, F@_1,
+				   F@_2, TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_add_named_ports_request(Rest, 0, Z2,
+					       F@_1, F@_2, TrUserData).
+
+skip_32_add_named_ports_request(<<_:32, Rest/binary>>,
+				Z1, Z2, F@_1, F@_2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_request(Rest, Z1, Z2,
+					       F@_1, F@_2, TrUserData).
+
+skip_64_add_named_ports_request(<<_:64, Rest/binary>>,
+				Z1, Z2, F@_1, F@_2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_request(Rest, Z1, Z2,
+					       F@_1, F@_2, TrUserData).
+
+decode_msg_add_named_ports_response(Bin, TrUserData) ->
+    dfp_read_field_def_add_named_ports_response(Bin, 0, 0,
+						TrUserData).
+
+dfp_read_field_def_add_named_ports_response(<<>>, 0, 0,
+					    _) ->
+    #{};
+dfp_read_field_def_add_named_ports_response(Other, Z1,
+					    Z2, TrUserData) ->
+    dg_read_field_def_add_named_ports_response(Other, Z1,
+					       Z2, TrUserData).
+
+dg_read_field_def_add_named_ports_response(<<1:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, TrUserData)
+    when N < 32 - 7 ->
+    dg_read_field_def_add_named_ports_response(Rest, N + 7,
+					       X bsl N + Acc, TrUserData);
+dg_read_field_def_add_named_ports_response(<<0:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key band 7 of
+      0 ->
+	  skip_varint_add_named_ports_response(Rest, 0, 0,
+					       TrUserData);
+      1 ->
+	  skip_64_add_named_ports_response(Rest, 0, 0,
+					   TrUserData);
+      2 ->
+	  skip_length_delimited_add_named_ports_response(Rest, 0,
+							 0, TrUserData);
+      3 ->
+	  skip_group_add_named_ports_response(Rest, Key bsr 3, 0,
+					      TrUserData);
+      5 ->
+	  skip_32_add_named_ports_response(Rest, 0, 0, TrUserData)
+    end;
+dg_read_field_def_add_named_ports_response(<<>>, 0, 0,
+					   _) ->
+    #{}.
+
+skip_varint_add_named_ports_response(<<1:1, _:7,
+				       Rest/binary>>,
+				     Z1, Z2, TrUserData) ->
+    skip_varint_add_named_ports_response(Rest, Z1, Z2,
+					 TrUserData);
+skip_varint_add_named_ports_response(<<0:1, _:7,
+				       Rest/binary>>,
+				     Z1, Z2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_response(Rest, Z1,
+						Z2, TrUserData).
+
+skip_length_delimited_add_named_ports_response(<<1:1,
+						 X:7, Rest/binary>>,
+					       N, Acc, TrUserData)
+    when N < 57 ->
+    skip_length_delimited_add_named_ports_response(Rest,
+						   N + 7, X bsl N + Acc,
+						   TrUserData);
+skip_length_delimited_add_named_ports_response(<<0:1,
+						 X:7, Rest/binary>>,
+					       N, Acc, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_add_named_ports_response(Rest2, 0, 0,
+						TrUserData).
+
+skip_group_add_named_ports_response(Bin, FNum, Z2,
+				    TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_add_named_ports_response(Rest, 0, Z2,
+						TrUserData).
+
+skip_32_add_named_ports_response(<<_:32, Rest/binary>>,
+				 Z1, Z2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_response(Rest, Z1,
+						Z2, TrUserData).
+
+skip_64_add_named_ports_response(<<_:64, Rest/binary>>,
+				 Z1, Z2, TrUserData) ->
+    dfp_read_field_def_add_named_ports_response(Rest, Z1,
+						Z2, TrUserData).
+
 decode_msg_lookup_endpoints_request(Bin, TrUserData) ->
     dfp_read_field_def_lookup_endpoints_request(Bin, 0, 0,
 						id(<<>>, TrUserData),
@@ -2164,6 +2775,166 @@ skip_64_register_endpoint_response(<<_:64,
     dfp_read_field_def_register_endpoint_response(Rest, Z1,
 						  Z2, TrUserData).
 
+'decode_msg_map<string,named_port>'(Bin, TrUserData) ->
+    'dfp_read_field_def_map<string,named_port>'(Bin, 0, 0,
+						id(<<>>, TrUserData),
+						id('$undef', TrUserData),
+						TrUserData).
+
+'dfp_read_field_def_map<string,named_port>'(<<10,
+					      Rest/binary>>,
+					    Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'd_field_map<string,named_port>_key'(Rest, Z1, Z2, F@_1,
+					 F@_2, TrUserData);
+'dfp_read_field_def_map<string,named_port>'(<<18,
+					      Rest/binary>>,
+					    Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'd_field_map<string,named_port>_value'(Rest, Z1, Z2,
+					   F@_1, F@_2, TrUserData);
+'dfp_read_field_def_map<string,named_port>'(<<>>, 0, 0,
+					    F@_1, F@_2, _) ->
+    S1 = #{key => F@_1},
+    if F@_2 == '$undef' -> S1;
+       true -> S1#{value => F@_2}
+    end;
+'dfp_read_field_def_map<string,named_port>'(Other, Z1,
+					    Z2, F@_1, F@_2, TrUserData) ->
+    'dg_read_field_def_map<string,named_port>'(Other, Z1,
+					       Z2, F@_1, F@_2, TrUserData).
+
+'dg_read_field_def_map<string,named_port>'(<<1:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, F@_1, F@_2, TrUserData)
+    when N < 32 - 7 ->
+    'dg_read_field_def_map<string,named_port>'(Rest, N + 7,
+					       X bsl N + Acc, F@_1, F@_2,
+					       TrUserData);
+'dg_read_field_def_map<string,named_port>'(<<0:1, X:7,
+					     Rest/binary>>,
+					   N, Acc, F@_1, F@_2, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+      10 ->
+	  'd_field_map<string,named_port>_key'(Rest, 0, 0, F@_1,
+					       F@_2, TrUserData);
+      18 ->
+	  'd_field_map<string,named_port>_value'(Rest, 0, 0, F@_1,
+						 F@_2, TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		'skip_varint_map<string,named_port>'(Rest, 0, 0, F@_1,
+						     F@_2, TrUserData);
+	    1 ->
+		'skip_64_map<string,named_port>'(Rest, 0, 0, F@_1, F@_2,
+						 TrUserData);
+	    2 ->
+		'skip_length_delimited_map<string,named_port>'(Rest, 0,
+							       0, F@_1, F@_2,
+							       TrUserData);
+	    3 ->
+		'skip_group_map<string,named_port>'(Rest, Key bsr 3, 0,
+						    F@_1, F@_2, TrUserData);
+	    5 ->
+		'skip_32_map<string,named_port>'(Rest, 0, 0, F@_1, F@_2,
+						 TrUserData)
+	  end
+    end;
+'dg_read_field_def_map<string,named_port>'(<<>>, 0, 0,
+					   F@_1, F@_2, _) ->
+    S1 = #{key => F@_1},
+    if F@_2 == '$undef' -> S1;
+       true -> S1#{value => F@_2}
+    end.
+
+'d_field_map<string,named_port>_key'(<<1:1, X:7,
+				       Rest/binary>>,
+				     N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    'd_field_map<string,named_port>_key'(Rest, N + 7,
+					 X bsl N + Acc, F@_1, F@_2, TrUserData);
+'d_field_map<string,named_port>_key'(<<0:1, X:7,
+				       Rest/binary>>,
+				     N, Acc, _, F@_2, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    'dfp_read_field_def_map<string,named_port>'(RestF, 0, 0,
+						NewFValue, F@_2, TrUserData).
+
+'d_field_map<string,named_port>_value'(<<1:1, X:7,
+					 Rest/binary>>,
+				       N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    'd_field_map<string,named_port>_value'(Rest, N + 7,
+					   X bsl N + Acc, F@_1, F@_2,
+					   TrUserData);
+'d_field_map<string,named_port>_value'(<<0:1, X:7,
+					 Rest/binary>>,
+				       N, Acc, F@_1, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bs:Len/binary, Rest2/binary>> = Rest,
+			   {id(decode_msg_named_port(Bs, TrUserData),
+			       TrUserData),
+			    Rest2}
+			 end,
+    'dfp_read_field_def_map<string,named_port>'(RestF, 0, 0,
+						F@_1,
+						if Prev == '$undef' ->
+						       NewFValue;
+						   true ->
+						       merge_msg_named_port(Prev,
+									    NewFValue,
+									    TrUserData)
+						end,
+						TrUserData).
+
+'skip_varint_map<string,named_port>'(<<1:1, _:7,
+				       Rest/binary>>,
+				     Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'skip_varint_map<string,named_port>'(Rest, Z1, Z2, F@_1,
+					 F@_2, TrUserData);
+'skip_varint_map<string,named_port>'(<<0:1, _:7,
+				       Rest/binary>>,
+				     Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'dfp_read_field_def_map<string,named_port>'(Rest, Z1,
+						Z2, F@_1, F@_2, TrUserData).
+
+'skip_length_delimited_map<string,named_port>'(<<1:1,
+						 X:7, Rest/binary>>,
+					       N, Acc, F@_1, F@_2, TrUserData)
+    when N < 57 ->
+    'skip_length_delimited_map<string,named_port>'(Rest,
+						   N + 7, X bsl N + Acc, F@_1,
+						   F@_2, TrUserData);
+'skip_length_delimited_map<string,named_port>'(<<0:1,
+						 X:7, Rest/binary>>,
+					       N, Acc, F@_1, F@_2,
+					       TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    'dfp_read_field_def_map<string,named_port>'(Rest2, 0, 0,
+						F@_1, F@_2, TrUserData).
+
+'skip_group_map<string,named_port>'(Bin, FNum, Z2, F@_1,
+				    F@_2, TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    'dfp_read_field_def_map<string,named_port>'(Rest, 0, Z2,
+						F@_1, F@_2, TrUserData).
+
+'skip_32_map<string,named_port>'(<<_:32, Rest/binary>>,
+				 Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'dfp_read_field_def_map<string,named_port>'(Rest, Z1,
+						Z2, F@_1, F@_2, TrUserData).
+
+'skip_64_map<string,named_port>'(<<_:64, Rest/binary>>,
+				 Z1, Z2, F@_1, F@_2, TrUserData) ->
+    'dfp_read_field_def_map<string,named_port>'(Rest, Z1,
+						Z2, F@_1, F@_2, TrUserData).
+
 'decode_msg_map<string,string>'(Bin, TrUserData) ->
     'dfp_read_field_def_map<string,string>'(Bin, 0, 0,
 					    id(<<>>, TrUserData),
@@ -2369,6 +3140,8 @@ merge_msgs(Prev, New, MsgName) when is_atom(MsgName) ->
 merge_msgs(Prev, New, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      named_port ->
+	  merge_msg_named_port(Prev, New, TrUserData);
       service -> merge_msg_service(Prev, New, TrUserData);
       endpoint -> merge_msg_endpoint(Prev, New, TrUserData);
       get_service_request ->
@@ -2384,6 +3157,12 @@ merge_msgs(Prev, New, MsgName, Opts) ->
 	  merge_msg_list_services_request(Prev, New, TrUserData);
       list_services_response ->
 	  merge_msg_list_services_response(Prev, New, TrUserData);
+      add_named_ports_request ->
+	  merge_msg_add_named_ports_request(Prev, New,
+					    TrUserData);
+      add_named_ports_response ->
+	  merge_msg_add_named_ports_response(Prev, New,
+					     TrUserData);
       lookup_endpoints_request ->
 	  merge_msg_lookup_endpoints_request(Prev, New,
 					     TrUserData);
@@ -2398,6 +3177,27 @@ merge_msgs(Prev, New, MsgName, Opts) ->
 					       TrUserData)
     end.
 
+-compile({nowarn_unused_function,merge_msg_named_port/3}).
+merge_msg_named_port(PMsg, NMsg, _) ->
+    S1 = #{},
+    S2 = case {PMsg, NMsg} of
+	   {_, #{name := NFname}} -> S1#{name => NFname};
+	   {#{name := PFname}, _} -> S1#{name => PFname};
+	   _ -> S1
+	 end,
+    S3 = case {PMsg, NMsg} of
+	   {_, #{protocol := NFprotocol}} ->
+	       S2#{protocol => NFprotocol};
+	   {#{protocol := PFprotocol}, _} ->
+	       S2#{protocol => PFprotocol};
+	   _ -> S2
+	 end,
+    case {PMsg, NMsg} of
+      {_, #{port := NFport}} -> S3#{port => NFport};
+      {#{port := PFport}, _} -> S3#{port => PFport};
+      _ -> S3
+    end.
+
 -compile({nowarn_unused_function,merge_msg_service/3}).
 merge_msg_service(PMsg, NMsg, TrUserData) ->
     S1 = #{},
@@ -2406,17 +3206,29 @@ merge_msg_service(PMsg, NMsg, TrUserData) ->
 	   {#{name := PFname}, _} -> S1#{name => PFname};
 	   _ -> S1
 	 end,
+    S3 = case {PMsg, NMsg} of
+	   {#{attributes := PFattributes},
+	    #{attributes := NFattributes}} ->
+	       S2#{attributes =>
+		       'tr_merge_service.attributes'(PFattributes,
+						     NFattributes, TrUserData)};
+	   {_, #{attributes := NFattributes}} ->
+	       S2#{attributes => NFattributes};
+	   {#{attributes := PFattributes}, _} ->
+	       S2#{attributes => PFattributes};
+	   {_, _} -> S2
+	 end,
     case {PMsg, NMsg} of
-      {#{attributes := PFattributes},
-       #{attributes := NFattributes}} ->
-	  S2#{attributes =>
-		  'tr_merge_service.attributes'(PFattributes,
-						NFattributes, TrUserData)};
-      {_, #{attributes := NFattributes}} ->
-	  S2#{attributes => NFattributes};
-      {#{attributes := PFattributes}, _} ->
-	  S2#{attributes => PFattributes};
-      {_, _} -> S2
+      {#{named_ports := PFnamed_ports},
+       #{named_ports := NFnamed_ports}} ->
+	  S3#{named_ports =>
+		  'tr_merge_service.named_ports'(PFnamed_ports,
+						 NFnamed_ports, TrUserData)};
+      {_, #{named_ports := NFnamed_ports}} ->
+	  S3#{named_ports => NFnamed_ports};
+      {#{named_ports := PFnamed_ports}, _} ->
+	  S3#{named_ports => PFnamed_ports};
+      {_, _} -> S3
     end.
 
 -compile({nowarn_unused_function,merge_msg_endpoint/3}).
@@ -2521,6 +3333,36 @@ merge_msg_list_services_response(PMsg, NMsg,
       {_, _} -> S1
     end.
 
+-compile({nowarn_unused_function,merge_msg_add_named_ports_request/3}).
+merge_msg_add_named_ports_request(PMsg, NMsg,
+				  TrUserData) ->
+    S1 = #{},
+    S2 = case {PMsg, NMsg} of
+	   {_, #{service_name := NFservice_name}} ->
+	       S1#{service_name => NFservice_name};
+	   {#{service_name := PFservice_name}, _} ->
+	       S1#{service_name => PFservice_name};
+	   _ -> S1
+	 end,
+    case {PMsg, NMsg} of
+      {#{named_ports := PFnamed_ports},
+       #{named_ports := NFnamed_ports}} ->
+	  S2#{named_ports =>
+		  'tr_merge_add_named_ports_request.named_ports'(PFnamed_ports,
+								 NFnamed_ports,
+								 TrUserData)};
+      {_, #{named_ports := NFnamed_ports}} ->
+	  S2#{named_ports => NFnamed_ports};
+      {#{named_ports := PFnamed_ports}, _} ->
+	  S2#{named_ports => PFnamed_ports};
+      {_, _} -> S2
+    end.
+
+-compile({nowarn_unused_function,merge_msg_add_named_ports_response/3}).
+merge_msg_add_named_ports_response(_Prev, New,
+				   _TrUserData) ->
+    New.
+
 -compile({nowarn_unused_function,merge_msg_lookup_endpoints_request/3}).
 merge_msg_lookup_endpoints_request(PMsg, NMsg, _) ->
     S1 = #{},
@@ -2583,6 +3425,8 @@ verify_msg(Msg, MsgName) when is_atom(MsgName) ->
 verify_msg(Msg, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
+      named_port ->
+	  v_msg_named_port(Msg, [MsgName], TrUserData);
       service -> v_msg_service(Msg, [MsgName], TrUserData);
       endpoint -> v_msg_endpoint(Msg, [MsgName], TrUserData);
       get_service_request ->
@@ -2600,6 +3444,12 @@ verify_msg(Msg, MsgName, Opts) ->
       list_services_response ->
 	  v_msg_list_services_response(Msg, [MsgName],
 				       TrUserData);
+      add_named_ports_request ->
+	  v_msg_add_named_ports_request(Msg, [MsgName],
+					TrUserData);
+      add_named_ports_response ->
+	  v_msg_add_named_ports_response(Msg, [MsgName],
+					 TrUserData);
       lookup_endpoints_request ->
 	  v_msg_lookup_endpoints_request(Msg, [MsgName],
 					 TrUserData);
@@ -2616,6 +3466,39 @@ verify_msg(Msg, MsgName, Opts) ->
     end.
 
 
+-compile({nowarn_unused_function,v_msg_named_port/3}).
+-dialyzer({nowarn_function,v_msg_named_port/3}).
+v_msg_named_port(#{} = M, Path, TrUserData) ->
+    case M of
+      #{name := F1} ->
+	  v_type_string(F1, [name | Path], TrUserData);
+      _ -> ok
+    end,
+    case M of
+      #{protocol := F2} ->
+	  v_type_string(F2, [protocol | Path], TrUserData);
+      _ -> ok
+    end,
+    case M of
+      #{port := F3} ->
+	  v_type_int32(F3, [port | Path], TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (name) -> ok;
+		      (protocol) -> ok;
+		      (port) -> ok;
+		      (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_named_port(M, Path, _TrUserData) when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   named_port},
+		  M, Path);
+v_msg_named_port(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, named_port}, X, Path).
+
 -compile({nowarn_unused_function,v_msg_service/3}).
 -dialyzer({nowarn_function,v_msg_service/3}).
 v_msg_service(#{} = M, Path, TrUserData) ->
@@ -2630,8 +3513,15 @@ v_msg_service(#{} = M, Path, TrUserData) ->
 				 TrUserData);
       _ -> ok
     end,
+    case M of
+      #{named_ports := F3} ->
+	  'v_map<string,named_port>'(F3, [named_ports | Path],
+				     TrUserData);
+      _ -> ok
+    end,
     lists:foreach(fun (name) -> ok;
 		      (attributes) -> ok;
+		      (named_ports) -> ok;
 		      (OtherKey) ->
 			  mk_type_error({extraneous_key, OtherKey}, M, Path)
 		  end,
@@ -2831,6 +3721,54 @@ v_msg_list_services_response(X, Path, _TrUserData) ->
     mk_type_error({expected_msg, list_services_response}, X,
 		  Path).
 
+-compile({nowarn_unused_function,v_msg_add_named_ports_request/3}).
+-dialyzer({nowarn_function,v_msg_add_named_ports_request/3}).
+v_msg_add_named_ports_request(#{} = M, Path,
+			      TrUserData) ->
+    case M of
+      #{service_name := F1} ->
+	  v_type_string(F1, [service_name | Path], TrUserData);
+      _ -> ok
+    end,
+    case M of
+      #{named_ports := F2} ->
+	  'v_map<string,named_port>'(F2, [named_ports | Path],
+				     TrUserData);
+      _ -> ok
+    end,
+    lists:foreach(fun (service_name) -> ok;
+		      (named_ports) -> ok;
+		      (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_add_named_ports_request(M, Path, _TrUserData)
+    when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   add_named_ports_request},
+		  M, Path);
+v_msg_add_named_ports_request(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, add_named_ports_request},
+		  X, Path).
+
+-compile({nowarn_unused_function,v_msg_add_named_ports_response/3}).
+-dialyzer({nowarn_function,v_msg_add_named_ports_response/3}).
+v_msg_add_named_ports_response(#{} = M, Path, _) ->
+    lists:foreach(fun (OtherKey) ->
+			  mk_type_error({extraneous_key, OtherKey}, M, Path)
+		  end,
+		  maps:keys(M)),
+    ok;
+v_msg_add_named_ports_response(M, Path, _TrUserData)
+    when is_map(M) ->
+    mk_type_error({missing_fields, [] -- maps:keys(M),
+		   add_named_ports_response},
+		  M, Path);
+v_msg_add_named_ports_response(X, Path, _TrUserData) ->
+    mk_type_error({expected_msg, add_named_ports_response},
+		  X, Path).
+
 -compile({nowarn_unused_function,v_msg_lookup_endpoints_request/3}).
 -dialyzer({nowarn_function,v_msg_lookup_endpoints_request/3}).
 v_msg_lookup_endpoints_request(#{} = M, Path,
@@ -2963,6 +3901,19 @@ v_type_string(S, Path, _TrUserData)
 v_type_string(X, Path, _TrUserData) ->
     mk_type_error(bad_unicode_string, X, Path).
 
+-compile({nowarn_unused_function,'v_map<string,named_port>'/3}).
+-dialyzer({nowarn_function,'v_map<string,named_port>'/3}).
+'v_map<string,named_port>'(M, Path, TrUserData)
+    when is_map(M) ->
+    [begin
+       v_type_string(Key, [key | Path], TrUserData),
+       v_msg_named_port(Value, [value | Path], TrUserData)
+     end
+     || {Key, Value} <- maps:to_list(M)],
+    ok;
+'v_map<string,named_port>'(X, Path, _TrUserData) ->
+    mk_type_error(invalid_map, X, Path).
+
 -compile({nowarn_unused_function,'v_map<string,string>'/3}).
 -dialyzer({nowarn_function,'v_map<string,string>'/3}).
 'v_map<string,string>'(M, Path, TrUserData)
@@ -3037,8 +3988,63 @@ cons(Elem, Acc, _TrUserData) -> [Elem | Acc].
 						 L, _) ->
     mt_add_item_m(Elem, L).
 
+-compile({inline,'tr_decode_init_default_service.named_ports'/2}).
+'tr_decode_init_default_service.named_ports'(_, _) ->
+    mt_empty_map_m().
+
+-compile({inline,'tr_merge_service.named_ports'/3}).
+'tr_merge_service.named_ports'(X1, X2, _) ->
+    mt_merge_maps_m(X1, X2).
+
+-compile({inline,'tr_decode_repeated_finalize_service.named_ports'/2}).
+'tr_decode_repeated_finalize_service.named_ports'(L,
+						  TrUserData) ->
+    id(L, TrUserData).
+
+-compile({inline,'tr_encode_service.named_ports'/2}).
+'tr_encode_service.named_ports'(X, _) ->
+    mt_map_to_list_m(X).
+
+-compile({inline,'tr_decode_repeated_add_elem_service.named_ports'/3}).
+'tr_decode_repeated_add_elem_service.named_ports'(Elem,
+						  L, _) ->
+    mt_add_item_m_verify_value(Elem, L).
+
+-compile({inline,'tr_decode_init_default_add_named_ports_request.named_ports'/2}).
+'tr_decode_init_default_add_named_ports_request.named_ports'(_,
+							     _) ->
+    mt_empty_map_m().
+
+-compile({inline,'tr_merge_add_named_ports_request.named_ports'/3}).
+'tr_merge_add_named_ports_request.named_ports'(X1, X2,
+					       _) ->
+    mt_merge_maps_m(X1, X2).
+
+-compile({inline,'tr_decode_repeated_finalize_add_named_ports_request.named_ports'/2}).
+'tr_decode_repeated_finalize_add_named_ports_request.named_ports'(L,
+								  TrUserData) ->
+    id(L, TrUserData).
+
+-compile({inline,'tr_encode_add_named_ports_request.named_ports'/2}).
+'tr_encode_add_named_ports_request.named_ports'(X, _) ->
+    mt_map_to_list_m(X).
+
+-compile({inline,'tr_decode_repeated_add_elem_add_named_ports_request.named_ports'/3}).
+'tr_decode_repeated_add_elem_add_named_ports_request.named_ports'(Elem,
+								  L, _) ->
+    mt_add_item_m_verify_value(Elem, L).
+
 -compile({inline,'tr_encode_service.attributes[x]'/2}).
 'tr_encode_service.attributes[x]'(X, _) ->
+    mt_maptuple_to_pseudomsg_m(X).
+
+-compile({inline,'tr_encode_service.named_ports[x]'/2}).
+'tr_encode_service.named_ports[x]'(X, _) ->
+    mt_maptuple_to_pseudomsg_m(X).
+
+-compile({inline,'tr_encode_add_named_ports_request.named_ports[x]'/2}).
+'tr_encode_add_named_ports_request.named_ports[x]'(X,
+						   _) ->
     mt_maptuple_to_pseudomsg_m(X).
 
 -compile({inline,mt_maptuple_to_pseudomsg_m/1}).
@@ -3057,6 +4063,13 @@ mt_empty_map_m() -> #{}.
 -compile({inline,mt_add_item_m/2}).
 mt_add_item_m(#{key := K, value := V}, M) -> M#{K => V}.
 
+-compile({inline,mt_add_item_m_verify_value/2}).
+mt_add_item_m_verify_value(#{key := K, value := V},
+			   M) ->
+    if V =:= '$undef' -> error({gpb_error, missing_value});
+       true -> M#{K => V}
+    end.
+
 
 -compile({inline,mt_merge_maps_m/2}).
 mt_merge_maps_m(M1, M2) -> maps:merge(M1, M2).
@@ -3064,12 +4077,22 @@ mt_merge_maps_m(M1, M2) -> maps:merge(M1, M2).
 
 
 get_msg_defs() ->
-    [{{msg, service},
+    [{{msg, named_port},
+      [#{name => name, fnum => 1, rnum => 2, type => string,
+	 occurrence => optional, opts => []},
+       #{name => protocol, fnum => 2, rnum => 3,
+	 type => string, occurrence => optional, opts => []},
+       #{name => port, fnum => 3, rnum => 4, type => int32,
+	 occurrence => optional, opts => []}]},
+     {{msg, service},
       [#{name => name, fnum => 1, rnum => 2, type => string,
 	 occurrence => optional, opts => []},
        #{name => attributes, fnum => 2, rnum => 3,
 	 type => {map, string, string}, occurrence => repeated,
-	 opts => []}]},
+	 opts => []},
+       #{name => named_ports, fnum => 3, rnum => 4,
+	 type => {map, string, {msg, named_port}},
+	 occurrence => repeated, opts => []}]},
      {{msg, endpoint},
       [#{name => service_name, fnum => 1, rnum => 2,
 	 type => string, occurrence => optional, opts => []},
@@ -3098,6 +4121,13 @@ get_msg_defs() ->
       [#{name => services, fnum => 1, rnum => 2,
 	 type => {msg, service}, occurrence => repeated,
 	 opts => []}]},
+     {{msg, add_named_ports_request},
+      [#{name => service_name, fnum => 1, rnum => 2,
+	 type => string, occurrence => optional, opts => []},
+       #{name => named_ports, fnum => 2, rnum => 3,
+	 type => {map, string, {msg, named_port}},
+	 occurrence => repeated, opts => []}]},
+     {{msg, add_named_ports_response}, []},
      {{msg, lookup_endpoints_request},
       [#{name => service_name, fnum => 1, rnum => 2,
 	 type => string, occurrence => optional, opts => []}]},
@@ -3115,10 +4145,11 @@ get_msg_defs() ->
 
 
 get_msg_names() ->
-    [service, endpoint, get_service_request,
+    [named_port, service, endpoint, get_service_request,
      get_service_response, create_service_request,
      create_service_response, list_services_request,
-     list_services_response, lookup_endpoints_request,
+     list_services_response, add_named_ports_request,
+     add_named_ports_response, lookup_endpoints_request,
      lookup_endpoints_response, register_endpoint_request,
      register_endpoint_response].
 
@@ -3127,10 +4158,11 @@ get_group_names() -> [].
 
 
 get_msg_or_group_names() ->
-    [service, endpoint, get_service_request,
+    [named_port, service, endpoint, get_service_request,
      get_service_response, create_service_request,
      create_service_response, list_services_request,
-     list_services_response, lookup_endpoints_request,
+     list_services_response, add_named_ports_request,
+     add_named_ports_response, lookup_endpoints_request,
      lookup_endpoints_response, register_endpoint_request,
      register_endpoint_response].
 
@@ -3150,12 +4182,22 @@ fetch_enum_def(EnumName) ->
     erlang:error({no_such_enum, EnumName}).
 
 
+find_msg_def(named_port) ->
+    [#{name => name, fnum => 1, rnum => 2, type => string,
+       occurrence => optional, opts => []},
+     #{name => protocol, fnum => 2, rnum => 3,
+       type => string, occurrence => optional, opts => []},
+     #{name => port, fnum => 3, rnum => 4, type => int32,
+       occurrence => optional, opts => []}];
 find_msg_def(service) ->
     [#{name => name, fnum => 1, rnum => 2, type => string,
        occurrence => optional, opts => []},
      #{name => attributes, fnum => 2, rnum => 3,
        type => {map, string, string}, occurrence => repeated,
-       opts => []}];
+       opts => []},
+     #{name => named_ports, fnum => 3, rnum => 4,
+       type => {map, string, {msg, named_port}},
+       occurrence => repeated, opts => []}];
 find_msg_def(endpoint) ->
     [#{name => service_name, fnum => 1, rnum => 2,
        type => string, occurrence => optional, opts => []},
@@ -3184,6 +4226,13 @@ find_msg_def(list_services_response) ->
     [#{name => services, fnum => 1, rnum => 2,
        type => {msg, service}, occurrence => repeated,
        opts => []}];
+find_msg_def(add_named_ports_request) ->
+    [#{name => service_name, fnum => 1, rnum => 2,
+       type => string, occurrence => optional, opts => []},
+     #{name => named_ports, fnum => 2, rnum => 3,
+       type => {map, string, {msg, named_port}},
+       occurrence => repeated, opts => []}];
+find_msg_def(add_named_ports_response) -> [];
 find_msg_def(lookup_endpoints_request) ->
     [#{name => service_name, fnum => 1, rnum => 2,
        type => string, occurrence => optional, opts => []}];
@@ -3232,6 +4281,11 @@ get_service_def('sd.DiscoveryService') ->
 	input => list_services_request,
 	output => list_services_response, input_stream => false,
 	output_stream => false, opts => []},
+      #{name => 'AddNamedPorts',
+	input => add_named_ports_request,
+	output => add_named_ports_response,
+	input_stream => false, output_stream => false,
+	opts => []},
       #{name => 'LookupEndpoints',
 	input => lookup_endpoints_request,
 	output => lookup_endpoints_response,
@@ -3247,7 +4301,7 @@ get_service_def(_) -> error.
 
 get_rpc_names('sd.DiscoveryService') ->
     ['GetService', 'CreateService', 'ListServices',
-     'LookupEndpoints', 'RegisterEndpoint'];
+     'AddNamedPorts', 'LookupEndpoints', 'RegisterEndpoint'];
 get_rpc_names(_) -> error.
 
 
@@ -3271,6 +4325,12 @@ find_rpc_def(_, _) -> error.
       input => list_services_request,
       output => list_services_response, input_stream => false,
       output_stream => false, opts => []};
+'find_rpc_def_sd.DiscoveryService'('AddNamedPorts') ->
+    #{name => 'AddNamedPorts',
+      input => add_named_ports_request,
+      output => add_named_ports_response,
+      input_stream => false, output_stream => false,
+      opts => []};
 'find_rpc_def_sd.DiscoveryService'('LookupEndpoints') ->
     #{name => 'LookupEndpoints',
       input => lookup_endpoints_request,
@@ -3317,6 +4377,8 @@ fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"CreateService">>) -
     {'sd.DiscoveryService', 'CreateService'};
 fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"ListServices">>) ->
     {'sd.DiscoveryService', 'ListServices'};
+fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"AddNamedPorts">>) ->
+    {'sd.DiscoveryService', 'AddNamedPorts'};
 fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"LookupEndpoints">>) ->
     {'sd.DiscoveryService', 'LookupEndpoints'};
 fqbins_to_service_and_rpc_name(<<"sd.DiscoveryService">>, <<"RegisterEndpoint">>) ->
@@ -3338,6 +4400,9 @@ service_and_rpc_name_to_fqbins('sd.DiscoveryService',
 			       'ListServices') ->
     {<<"sd.DiscoveryService">>, <<"ListServices">>};
 service_and_rpc_name_to_fqbins('sd.DiscoveryService',
+			       'AddNamedPorts') ->
+    {<<"sd.DiscoveryService">>, <<"AddNamedPorts">>};
+service_and_rpc_name_to_fqbins('sd.DiscoveryService',
 			       'LookupEndpoints') ->
     {<<"sd.DiscoveryService">>, <<"LookupEndpoints">>};
 service_and_rpc_name_to_fqbins('sd.DiscoveryService',
@@ -3347,6 +4412,7 @@ service_and_rpc_name_to_fqbins(S, R) ->
     error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
+fqbin_to_msg_name(<<"sd.NamedPort">>) -> named_port;
 fqbin_to_msg_name(<<"sd.Service">>) -> service;
 fqbin_to_msg_name(<<"sd.Endpoint">>) -> endpoint;
 fqbin_to_msg_name(<<"sd.GetServiceRequest">>) -> get_service_request;
@@ -3355,6 +4421,8 @@ fqbin_to_msg_name(<<"sd.CreateServiceRequest">>) -> create_service_request;
 fqbin_to_msg_name(<<"sd.CreateServiceResponse">>) -> create_service_response;
 fqbin_to_msg_name(<<"sd.ListServicesRequest">>) -> list_services_request;
 fqbin_to_msg_name(<<"sd.ListServicesResponse">>) -> list_services_response;
+fqbin_to_msg_name(<<"sd.AddNamedPortsRequest">>) -> add_named_ports_request;
+fqbin_to_msg_name(<<"sd.AddNamedPortsResponse">>) -> add_named_ports_response;
 fqbin_to_msg_name(<<"sd.LookupEndpointsRequest">>) -> lookup_endpoints_request;
 fqbin_to_msg_name(<<"sd.LookupEndpointsResponse">>) -> lookup_endpoints_response;
 fqbin_to_msg_name(<<"sd.RegisterEndpointRequest">>) -> register_endpoint_request;
@@ -3363,6 +4431,7 @@ fqbin_to_msg_name(<<"sd.RegisterEndpointResponse">>) ->
 fqbin_to_msg_name(E) -> error({gpb_error, {badmsg, E}}).
 
 
+msg_name_to_fqbin(named_port) -> <<"sd.NamedPort">>;
 msg_name_to_fqbin(service) -> <<"sd.Service">>;
 msg_name_to_fqbin(endpoint) -> <<"sd.Endpoint">>;
 msg_name_to_fqbin(get_service_request) -> <<"sd.GetServiceRequest">>;
@@ -3371,6 +4440,8 @@ msg_name_to_fqbin(create_service_request) -> <<"sd.CreateServiceRequest">>;
 msg_name_to_fqbin(create_service_response) -> <<"sd.CreateServiceResponse">>;
 msg_name_to_fqbin(list_services_request) -> <<"sd.ListServicesRequest">>;
 msg_name_to_fqbin(list_services_response) -> <<"sd.ListServicesResponse">>;
+msg_name_to_fqbin(add_named_ports_request) -> <<"sd.AddNamedPortsRequest">>;
+msg_name_to_fqbin(add_named_ports_response) -> <<"sd.AddNamedPortsResponse">>;
 msg_name_to_fqbin(lookup_endpoints_request) -> <<"sd.LookupEndpointsRequest">>;
 msg_name_to_fqbin(lookup_endpoints_response) -> <<"sd.LookupEndpointsResponse">>;
 msg_name_to_fqbin(register_endpoint_request) -> <<"sd.RegisterEndpointRequest">>;
@@ -3417,12 +4488,13 @@ get_all_proto_names() -> ["discovery"].
 
 
 get_msg_containment("discovery") ->
-    [create_service_request, create_service_response,
+    [add_named_ports_request, add_named_ports_response,
+     create_service_request, create_service_response,
      endpoint, get_service_request, get_service_response,
      list_services_request, list_services_response,
      lookup_endpoints_request, lookup_endpoints_response,
-     register_endpoint_request, register_endpoint_response,
-     service];
+     named_port, register_endpoint_request,
+     register_endpoint_response, service];
 get_msg_containment(P) ->
     error({gpb_error, {badproto, P}}).
 
@@ -3442,6 +4514,7 @@ get_rpc_containment("discovery") ->
     [{'sd.DiscoveryService', 'GetService'},
      {'sd.DiscoveryService', 'CreateService'},
      {'sd.DiscoveryService', 'ListServices'},
+     {'sd.DiscoveryService', 'AddNamedPorts'},
      {'sd.DiscoveryService', 'LookupEndpoints'},
      {'sd.DiscoveryService', 'RegisterEndpoint'}];
 get_rpc_containment(P) ->
@@ -3454,17 +4527,20 @@ get_enum_containment(P) ->
 
 
 get_proto_by_msg_name_as_fqbin(<<"sd.RegisterEndpointRequest">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.NamedPort">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.LookupEndpointsRequest">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.ListServicesRequest">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.GetServiceRequest">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.Endpoint">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.CreateServiceRequest">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.AddNamedPortsRequest">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.Service">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.RegisterEndpointResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.LookupEndpointsResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.ListServicesResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.GetServiceResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(<<"sd.CreateServiceResponse">>) -> "discovery";
+get_proto_by_msg_name_as_fqbin(<<"sd.AddNamedPortsResponse">>) -> "discovery";
 get_proto_by_msg_name_as_fqbin(E) ->
     error({gpb_error, {badmsg, E}}).
 
@@ -3487,192 +4563,248 @@ get_protos_by_pkg_name_as_fqbin(E) ->
 
 
 descriptor() ->
-    <<10, 219, 8, 10, 18, 115, 100, 47, 100, 105, 115, 99,
+    <<10, 201, 11, 10, 18, 115, 100, 47, 100, 105, 115, 99,
       111, 118, 101, 114, 121, 46, 112, 114, 111, 116, 111,
-      18, 2, 115, 100, 34, 52, 10, 20, 67, 114, 101, 97, 116,
-      101, 83, 101, 114, 118, 105, 99, 101, 82, 101, 113, 117,
-      101, 115, 116, 18, 28, 10, 7, 115, 101, 114, 118, 105,
-      99, 101, 24, 1, 32, 1, 40, 11, 50, 11, 46, 115, 100, 46,
-      83, 101, 114, 118, 105, 99, 101, 34, 23, 10, 21, 67,
-      114, 101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101,
-      82, 101, 115, 112, 111, 110, 115, 101, 34, 91, 10, 8,
-      69, 110, 100, 112, 111, 105, 110, 116, 18, 20, 10, 12,
-      115, 101, 114, 118, 105, 99, 101, 95, 110, 97, 109, 101,
-      24, 1, 32, 1, 40, 9, 18, 10, 10, 2, 105, 112, 24, 2, 32,
-      1, 40, 9, 18, 12, 10, 4, 112, 111, 114, 116, 24, 3, 32,
-      1, 40, 5, 18, 17, 10, 9, 112, 111, 114, 116, 95, 110,
-      97, 109, 101, 24, 4, 32, 1, 40, 9, 18, 12, 10, 4, 116,
-      97, 103, 115, 24, 5, 32, 3, 40, 9, 34, 41, 10, 17, 71,
-      101, 116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 113,
+      18, 2, 115, 100, 34, 88, 10, 20, 65, 100, 100, 78, 97,
+      109, 101, 100, 80, 111, 114, 116, 115, 82, 101, 113,
       117, 101, 115, 116, 18, 20, 10, 12, 115, 101, 114, 118,
       105, 99, 101, 95, 110, 97, 109, 101, 24, 1, 32, 1, 40,
-      9, 34, 50, 10, 18, 71, 101, 116, 83, 101, 114, 118, 105,
-      99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 18, 28,
-      10, 7, 115, 101, 114, 118, 105, 99, 101, 24, 1, 32, 1,
-      40, 11, 50, 11, 46, 115, 100, 46, 83, 101, 114, 118,
-      105, 99, 101, 34, 21, 10, 19, 76, 105, 115, 116, 83,
-      101, 114, 118, 105, 99, 101, 115, 82, 101, 113, 117,
-      101, 115, 116, 34, 53, 10, 20, 76, 105, 115, 116, 83,
-      101, 114, 118, 105, 99, 101, 115, 82, 101, 115, 112,
-      111, 110, 115, 101, 18, 29, 10, 8, 115, 101, 114, 118,
-      105, 99, 101, 115, 24, 1, 32, 3, 40, 11, 50, 11, 46,
-      115, 100, 46, 83, 101, 114, 118, 105, 99, 101, 34, 46,
-      10, 22, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112,
-      111, 105, 110, 116, 115, 82, 101, 113, 117, 101, 115,
-      116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99, 101,
-      95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 34, 58, 10,
-      23, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112, 111,
-      105, 110, 116, 115, 82, 101, 115, 112, 111, 110, 115,
-      101, 18, 31, 10, 9, 101, 110, 100, 112, 111, 105, 110,
-      116, 115, 24, 1, 32, 3, 40, 11, 50, 12, 46, 115, 100,
-      46, 69, 110, 100, 112, 111, 105, 110, 116, 34, 79, 10,
-      23, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110, 100,
-      112, 111, 105, 110, 116, 82, 101, 113, 117, 101, 115,
-      116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99, 101,
-      95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 30, 10,
-      8, 101, 110, 100, 112, 111, 105, 110, 116, 24, 2, 32, 1,
-      40, 11, 50, 12, 46, 115, 100, 46, 69, 110, 100, 112,
-      111, 105, 110, 116, 34, 26, 10, 24, 82, 101, 103, 105,
-      115, 116, 101, 114, 69, 110, 100, 112, 111, 105, 110,
-      116, 82, 101, 115, 112, 111, 110, 115, 101, 34, 66, 10,
-      7, 83, 101, 114, 118, 105, 99, 101, 18, 12, 10, 4, 110,
-      97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 41, 10, 10, 97,
-      116, 116, 114, 105, 98, 117, 116, 101, 115, 24, 2, 32,
-      3, 40, 11, 50, 21, 46, 115, 100, 46, 77, 97, 112, 70,
-      105, 101, 108, 100, 69, 110, 116, 114, 121, 95, 49, 95,
-      49, 34, 57, 10, 17, 77, 97, 112, 70, 105, 101, 108, 100,
-      69, 110, 116, 114, 121, 95, 49, 95, 49, 18, 11, 10, 3,
-      107, 101, 121, 24, 1, 32, 2, 40, 9, 18, 13, 10, 5, 118,
-      97, 108, 117, 101, 24, 2, 32, 2, 40, 9, 58, 8, 8, 0, 16,
-      0, 24, 0, 56, 1, 50, 135, 3, 10, 16, 68, 105, 115, 99,
-      111, 118, 101, 114, 121, 83, 101, 114, 118, 105, 99,
-      101, 18, 63, 10, 10, 71, 101, 116, 83, 101, 114, 118,
-      105, 99, 101, 18, 21, 46, 115, 100, 46, 71, 101, 116,
-      83, 101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 26, 22, 46, 115, 100, 46, 71, 101, 116, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
-      110, 115, 101, 40, 0, 48, 0, 18, 72, 10, 13, 67, 114,
-      101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101, 18,
-      24, 46, 115, 100, 46, 67, 114, 101, 97, 116, 101, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 26, 25, 46, 115, 100, 46, 67, 114, 101, 97,
-      116, 101, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115,
-      112, 111, 110, 115, 101, 40, 0, 48, 0, 18, 69, 10, 12,
+      9, 18, 42, 10, 11, 110, 97, 109, 101, 100, 95, 112, 111,
+      114, 116, 115, 24, 2, 32, 3, 40, 11, 50, 21, 46, 115,
+      100, 46, 77, 97, 112, 70, 105, 101, 108, 100, 69, 110,
+      116, 114, 121, 95, 49, 95, 50, 34, 23, 10, 21, 65, 100,
+      100, 78, 97, 109, 101, 100, 80, 111, 114, 116, 115, 82,
+      101, 115, 112, 111, 110, 115, 101, 34, 52, 10, 20, 67,
+      114, 101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101,
+      82, 101, 113, 117, 101, 115, 116, 18, 28, 10, 7, 115,
+      101, 114, 118, 105, 99, 101, 24, 1, 32, 1, 40, 11, 50,
+      11, 46, 115, 100, 46, 83, 101, 114, 118, 105, 99, 101,
+      34, 23, 10, 21, 67, 114, 101, 97, 116, 101, 83, 101,
+      114, 118, 105, 99, 101, 82, 101, 115, 112, 111, 110,
+      115, 101, 34, 91, 10, 8, 69, 110, 100, 112, 111, 105,
+      110, 116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99,
+      101, 95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 10,
+      10, 2, 105, 112, 24, 2, 32, 1, 40, 9, 18, 12, 10, 4,
+      112, 111, 114, 116, 24, 3, 32, 1, 40, 5, 18, 17, 10, 9,
+      112, 111, 114, 116, 95, 110, 97, 109, 101, 24, 4, 32, 1,
+      40, 9, 18, 12, 10, 4, 116, 97, 103, 115, 24, 5, 32, 3,
+      40, 9, 34, 41, 10, 17, 71, 101, 116, 83, 101, 114, 118,
+      105, 99, 101, 82, 101, 113, 117, 101, 115, 116, 18, 20,
+      10, 12, 115, 101, 114, 118, 105, 99, 101, 95, 110, 97,
+      109, 101, 24, 1, 32, 1, 40, 9, 34, 50, 10, 18, 71, 101,
+      116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115, 112,
+      111, 110, 115, 101, 18, 28, 10, 7, 115, 101, 114, 118,
+      105, 99, 101, 24, 1, 32, 1, 40, 11, 50, 11, 46, 115,
+      100, 46, 83, 101, 114, 118, 105, 99, 101, 34, 21, 10,
+      19, 76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101,
+      115, 82, 101, 113, 117, 101, 115, 116, 34, 53, 10, 20,
       76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115,
-      18, 23, 46, 115, 100, 46, 76, 105, 115, 116, 83, 101,
-      114, 118, 105, 99, 101, 115, 82, 101, 113, 117, 101,
-      115, 116, 26, 24, 46, 115, 100, 46, 76, 105, 115, 116,
-      83, 101, 114, 118, 105, 99, 101, 115, 82, 101, 115, 112,
-      111, 110, 115, 101, 40, 0, 48, 0, 18, 78, 10, 15, 76,
-      111, 111, 107, 117, 112, 69, 110, 100, 112, 111, 105,
-      110, 116, 115, 18, 26, 46, 115, 100, 46, 76, 111, 111,
-      107, 117, 112, 69, 110, 100, 112, 111, 105, 110, 116,
-      115, 82, 101, 113, 117, 101, 115, 116, 26, 27, 46, 115,
-      100, 46, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112,
-      111, 105, 110, 116, 115, 82, 101, 115, 112, 111, 110,
-      115, 101, 40, 0, 48, 0, 18, 81, 10, 16, 82, 101, 103,
-      105, 115, 116, 101, 114, 69, 110, 100, 112, 111, 105,
-      110, 116, 18, 27, 46, 115, 100, 46, 82, 101, 103, 105,
+      82, 101, 115, 112, 111, 110, 115, 101, 18, 29, 10, 8,
+      115, 101, 114, 118, 105, 99, 101, 115, 24, 1, 32, 3, 40,
+      11, 50, 11, 46, 115, 100, 46, 83, 101, 114, 118, 105,
+      99, 101, 34, 46, 10, 22, 76, 111, 111, 107, 117, 112,
+      69, 110, 100, 112, 111, 105, 110, 116, 115, 82, 101,
+      113, 117, 101, 115, 116, 18, 20, 10, 12, 115, 101, 114,
+      118, 105, 99, 101, 95, 110, 97, 109, 101, 24, 1, 32, 1,
+      40, 9, 34, 58, 10, 23, 76, 111, 111, 107, 117, 112, 69,
+      110, 100, 112, 111, 105, 110, 116, 115, 82, 101, 115,
+      112, 111, 110, 115, 101, 18, 31, 10, 9, 101, 110, 100,
+      112, 111, 105, 110, 116, 115, 24, 1, 32, 3, 40, 11, 50,
+      12, 46, 115, 100, 46, 69, 110, 100, 112, 111, 105, 110,
+      116, 34, 57, 10, 9, 78, 97, 109, 101, 100, 80, 111, 114,
+      116, 18, 12, 10, 4, 110, 97, 109, 101, 24, 1, 32, 1, 40,
+      9, 18, 16, 10, 8, 112, 114, 111, 116, 111, 99, 111, 108,
+      24, 2, 32, 1, 40, 9, 18, 12, 10, 4, 112, 111, 114, 116,
+      24, 3, 32, 1, 40, 5, 34, 79, 10, 23, 82, 101, 103, 105,
       115, 116, 101, 114, 69, 110, 100, 112, 111, 105, 110,
-      116, 82, 101, 113, 117, 101, 115, 116, 26, 28, 46, 115,
-      100, 46, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110,
-      100, 112, 111, 105, 110, 116, 82, 101, 115, 112, 111,
-      110, 115, 101, 40, 0, 48, 0, 98, 6, 112, 114, 111, 116,
-      111, 51>>.
+      116, 82, 101, 113, 117, 101, 115, 116, 18, 20, 10, 12,
+      115, 101, 114, 118, 105, 99, 101, 95, 110, 97, 109, 101,
+      24, 1, 32, 1, 40, 9, 18, 30, 10, 8, 101, 110, 100, 112,
+      111, 105, 110, 116, 24, 2, 32, 1, 40, 11, 50, 12, 46,
+      115, 100, 46, 69, 110, 100, 112, 111, 105, 110, 116, 34,
+      26, 10, 24, 82, 101, 103, 105, 115, 116, 101, 114, 69,
+      110, 100, 112, 111, 105, 110, 116, 82, 101, 115, 112,
+      111, 110, 115, 101, 34, 110, 10, 7, 83, 101, 114, 118,
+      105, 99, 101, 18, 12, 10, 4, 110, 97, 109, 101, 24, 1,
+      32, 1, 40, 9, 18, 41, 10, 10, 97, 116, 116, 114, 105,
+      98, 117, 116, 101, 115, 24, 2, 32, 3, 40, 11, 50, 21,
+      46, 115, 100, 46, 77, 97, 112, 70, 105, 101, 108, 100,
+      69, 110, 116, 114, 121, 95, 49, 95, 49, 18, 42, 10, 11,
+      110, 97, 109, 101, 100, 95, 112, 111, 114, 116, 115, 24,
+      3, 32, 3, 40, 11, 50, 21, 46, 115, 100, 46, 77, 97, 112,
+      70, 105, 101, 108, 100, 69, 110, 116, 114, 121, 95, 49,
+      95, 50, 34, 57, 10, 17, 77, 97, 112, 70, 105, 101, 108,
+      100, 69, 110, 116, 114, 121, 95, 49, 95, 49, 18, 11, 10,
+      3, 107, 101, 121, 24, 1, 32, 2, 40, 9, 18, 13, 10, 5,
+      118, 97, 108, 117, 101, 24, 2, 32, 2, 40, 9, 58, 8, 8,
+      0, 16, 0, 24, 0, 56, 1, 34, 72, 10, 17, 77, 97, 112, 70,
+      105, 101, 108, 100, 69, 110, 116, 114, 121, 95, 49, 95,
+      50, 18, 11, 10, 3, 107, 101, 121, 24, 1, 32, 2, 40, 9,
+      18, 28, 10, 5, 118, 97, 108, 117, 101, 24, 2, 32, 2, 40,
+      11, 50, 13, 46, 115, 100, 46, 78, 97, 109, 101, 100, 80,
+      111, 114, 116, 58, 8, 8, 0, 16, 0, 24, 0, 56, 1, 50,
+      209, 3, 10, 16, 68, 105, 115, 99, 111, 118, 101, 114,
+      121, 83, 101, 114, 118, 105, 99, 101, 18, 63, 10, 10,
+      71, 101, 116, 83, 101, 114, 118, 105, 99, 101, 18, 21,
+      46, 115, 100, 46, 71, 101, 116, 83, 101, 114, 118, 105,
+      99, 101, 82, 101, 113, 117, 101, 115, 116, 26, 22, 46,
+      115, 100, 46, 71, 101, 116, 83, 101, 114, 118, 105, 99,
+      101, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48,
+      0, 18, 72, 10, 13, 67, 114, 101, 97, 116, 101, 83, 101,
+      114, 118, 105, 99, 101, 18, 24, 46, 115, 100, 46, 67,
+      114, 101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101,
+      82, 101, 113, 117, 101, 115, 116, 26, 25, 46, 115, 100,
+      46, 67, 114, 101, 97, 116, 101, 83, 101, 114, 118, 105,
+      99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0,
+      48, 0, 18, 69, 10, 12, 76, 105, 115, 116, 83, 101, 114,
+      118, 105, 99, 101, 115, 18, 23, 46, 115, 100, 46, 76,
+      105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115, 82,
+      101, 113, 117, 101, 115, 116, 26, 24, 46, 115, 100, 46,
+      76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115,
+      82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 18,
+      72, 10, 13, 65, 100, 100, 78, 97, 109, 101, 100, 80,
+      111, 114, 116, 115, 18, 24, 46, 115, 100, 46, 65, 100,
+      100, 78, 97, 109, 101, 100, 80, 111, 114, 116, 115, 82,
+      101, 113, 117, 101, 115, 116, 26, 25, 46, 115, 100, 46,
+      65, 100, 100, 78, 97, 109, 101, 100, 80, 111, 114, 116,
+      115, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48,
+      0, 18, 78, 10, 15, 76, 111, 111, 107, 117, 112, 69, 110,
+      100, 112, 111, 105, 110, 116, 115, 18, 26, 46, 115, 100,
+      46, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112, 111,
+      105, 110, 116, 115, 82, 101, 113, 117, 101, 115, 116,
+      26, 27, 46, 115, 100, 46, 76, 111, 111, 107, 117, 112,
+      69, 110, 100, 112, 111, 105, 110, 116, 115, 82, 101,
+      115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 18, 81, 10,
+      16, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110, 100,
+      112, 111, 105, 110, 116, 18, 27, 46, 115, 100, 46, 82,
+      101, 103, 105, 115, 116, 101, 114, 69, 110, 100, 112,
+      111, 105, 110, 116, 82, 101, 113, 117, 101, 115, 116,
+      26, 28, 46, 115, 100, 46, 82, 101, 103, 105, 115, 116,
+      101, 114, 69, 110, 100, 112, 111, 105, 110, 116, 82,
+      101, 115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 98, 6,
+      112, 114, 111, 116, 111, 51>>.
 
 descriptor("discovery") ->
     <<10, 18, 115, 100, 47, 100, 105, 115, 99, 111, 118,
       101, 114, 121, 46, 112, 114, 111, 116, 111, 18, 2, 115,
-      100, 34, 52, 10, 20, 67, 114, 101, 97, 116, 101, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 18, 28, 10, 7, 115, 101, 114, 118, 105, 99,
-      101, 24, 1, 32, 1, 40, 11, 50, 11, 46, 115, 100, 46, 83,
-      101, 114, 118, 105, 99, 101, 34, 23, 10, 21, 67, 114,
-      101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101, 82,
-      101, 115, 112, 111, 110, 115, 101, 34, 91, 10, 8, 69,
-      110, 100, 112, 111, 105, 110, 116, 18, 20, 10, 12, 115,
+      100, 34, 88, 10, 20, 65, 100, 100, 78, 97, 109, 101,
+      100, 80, 111, 114, 116, 115, 82, 101, 113, 117, 101,
+      115, 116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99,
+      101, 95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 42,
+      10, 11, 110, 97, 109, 101, 100, 95, 112, 111, 114, 116,
+      115, 24, 2, 32, 3, 40, 11, 50, 21, 46, 115, 100, 46, 77,
+      97, 112, 70, 105, 101, 108, 100, 69, 110, 116, 114, 121,
+      95, 49, 95, 50, 34, 23, 10, 21, 65, 100, 100, 78, 97,
+      109, 101, 100, 80, 111, 114, 116, 115, 82, 101, 115,
+      112, 111, 110, 115, 101, 34, 52, 10, 20, 67, 114, 101,
+      97, 116, 101, 83, 101, 114, 118, 105, 99, 101, 82, 101,
+      113, 117, 101, 115, 116, 18, 28, 10, 7, 115, 101, 114,
+      118, 105, 99, 101, 24, 1, 32, 1, 40, 11, 50, 11, 46,
+      115, 100, 46, 83, 101, 114, 118, 105, 99, 101, 34, 23,
+      10, 21, 67, 114, 101, 97, 116, 101, 83, 101, 114, 118,
+      105, 99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 34,
+      91, 10, 8, 69, 110, 100, 112, 111, 105, 110, 116, 18,
+      20, 10, 12, 115, 101, 114, 118, 105, 99, 101, 95, 110,
+      97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 10, 10, 2, 105,
+      112, 24, 2, 32, 1, 40, 9, 18, 12, 10, 4, 112, 111, 114,
+      116, 24, 3, 32, 1, 40, 5, 18, 17, 10, 9, 112, 111, 114,
+      116, 95, 110, 97, 109, 101, 24, 4, 32, 1, 40, 9, 18, 12,
+      10, 4, 116, 97, 103, 115, 24, 5, 32, 3, 40, 9, 34, 41,
+      10, 17, 71, 101, 116, 83, 101, 114, 118, 105, 99, 101,
+      82, 101, 113, 117, 101, 115, 116, 18, 20, 10, 12, 115,
       101, 114, 118, 105, 99, 101, 95, 110, 97, 109, 101, 24,
-      1, 32, 1, 40, 9, 18, 10, 10, 2, 105, 112, 24, 2, 32, 1,
-      40, 9, 18, 12, 10, 4, 112, 111, 114, 116, 24, 3, 32, 1,
-      40, 5, 18, 17, 10, 9, 112, 111, 114, 116, 95, 110, 97,
-      109, 101, 24, 4, 32, 1, 40, 9, 18, 12, 10, 4, 116, 97,
-      103, 115, 24, 5, 32, 3, 40, 9, 34, 41, 10, 17, 71, 101,
-      116, 83, 101, 114, 118, 105, 99, 101, 82, 101, 113, 117,
-      101, 115, 116, 18, 20, 10, 12, 115, 101, 114, 118, 105,
-      99, 101, 95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 34,
-      50, 10, 18, 71, 101, 116, 83, 101, 114, 118, 105, 99,
-      101, 82, 101, 115, 112, 111, 110, 115, 101, 18, 28, 10,
-      7, 115, 101, 114, 118, 105, 99, 101, 24, 1, 32, 1, 40,
-      11, 50, 11, 46, 115, 100, 46, 83, 101, 114, 118, 105,
-      99, 101, 34, 21, 10, 19, 76, 105, 115, 116, 83, 101,
-      114, 118, 105, 99, 101, 115, 82, 101, 113, 117, 101,
-      115, 116, 34, 53, 10, 20, 76, 105, 115, 116, 83, 101,
-      114, 118, 105, 99, 101, 115, 82, 101, 115, 112, 111,
-      110, 115, 101, 18, 29, 10, 8, 115, 101, 114, 118, 105,
-      99, 101, 115, 24, 1, 32, 3, 40, 11, 50, 11, 46, 115,
-      100, 46, 83, 101, 114, 118, 105, 99, 101, 34, 46, 10,
-      22, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112, 111,
-      105, 110, 116, 115, 82, 101, 113, 117, 101, 115, 116,
-      18, 20, 10, 12, 115, 101, 114, 118, 105, 99, 101, 95,
-      110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 34, 58, 10, 23,
-      76, 111, 111, 107, 117, 112, 69, 110, 100, 112, 111,
-      105, 110, 116, 115, 82, 101, 115, 112, 111, 110, 115,
-      101, 18, 31, 10, 9, 101, 110, 100, 112, 111, 105, 110,
-      116, 115, 24, 1, 32, 3, 40, 11, 50, 12, 46, 115, 100,
-      46, 69, 110, 100, 112, 111, 105, 110, 116, 34, 79, 10,
-      23, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110, 100,
-      112, 111, 105, 110, 116, 82, 101, 113, 117, 101, 115,
-      116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99, 101,
-      95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 30, 10,
-      8, 101, 110, 100, 112, 111, 105, 110, 116, 24, 2, 32, 1,
-      40, 11, 50, 12, 46, 115, 100, 46, 69, 110, 100, 112,
-      111, 105, 110, 116, 34, 26, 10, 24, 82, 101, 103, 105,
-      115, 116, 101, 114, 69, 110, 100, 112, 111, 105, 110,
-      116, 82, 101, 115, 112, 111, 110, 115, 101, 34, 66, 10,
-      7, 83, 101, 114, 118, 105, 99, 101, 18, 12, 10, 4, 110,
-      97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 41, 10, 10, 97,
-      116, 116, 114, 105, 98, 117, 116, 101, 115, 24, 2, 32,
+      1, 32, 1, 40, 9, 34, 50, 10, 18, 71, 101, 116, 83, 101,
+      114, 118, 105, 99, 101, 82, 101, 115, 112, 111, 110,
+      115, 101, 18, 28, 10, 7, 115, 101, 114, 118, 105, 99,
+      101, 24, 1, 32, 1, 40, 11, 50, 11, 46, 115, 100, 46, 83,
+      101, 114, 118, 105, 99, 101, 34, 21, 10, 19, 76, 105,
+      115, 116, 83, 101, 114, 118, 105, 99, 101, 115, 82, 101,
+      113, 117, 101, 115, 116, 34, 53, 10, 20, 76, 105, 115,
+      116, 83, 101, 114, 118, 105, 99, 101, 115, 82, 101, 115,
+      112, 111, 110, 115, 101, 18, 29, 10, 8, 115, 101, 114,
+      118, 105, 99, 101, 115, 24, 1, 32, 3, 40, 11, 50, 11,
+      46, 115, 100, 46, 83, 101, 114, 118, 105, 99, 101, 34,
+      46, 10, 22, 76, 111, 111, 107, 117, 112, 69, 110, 100,
+      112, 111, 105, 110, 116, 115, 82, 101, 113, 117, 101,
+      115, 116, 18, 20, 10, 12, 115, 101, 114, 118, 105, 99,
+      101, 95, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 34, 58,
+      10, 23, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112,
+      111, 105, 110, 116, 115, 82, 101, 115, 112, 111, 110,
+      115, 101, 18, 31, 10, 9, 101, 110, 100, 112, 111, 105,
+      110, 116, 115, 24, 1, 32, 3, 40, 11, 50, 12, 46, 115,
+      100, 46, 69, 110, 100, 112, 111, 105, 110, 116, 34, 57,
+      10, 9, 78, 97, 109, 101, 100, 80, 111, 114, 116, 18, 12,
+      10, 4, 110, 97, 109, 101, 24, 1, 32, 1, 40, 9, 18, 16,
+      10, 8, 112, 114, 111, 116, 111, 99, 111, 108, 24, 2, 32,
+      1, 40, 9, 18, 12, 10, 4, 112, 111, 114, 116, 24, 3, 32,
+      1, 40, 5, 34, 79, 10, 23, 82, 101, 103, 105, 115, 116,
+      101, 114, 69, 110, 100, 112, 111, 105, 110, 116, 82,
+      101, 113, 117, 101, 115, 116, 18, 20, 10, 12, 115, 101,
+      114, 118, 105, 99, 101, 95, 110, 97, 109, 101, 24, 1,
+      32, 1, 40, 9, 18, 30, 10, 8, 101, 110, 100, 112, 111,
+      105, 110, 116, 24, 2, 32, 1, 40, 11, 50, 12, 46, 115,
+      100, 46, 69, 110, 100, 112, 111, 105, 110, 116, 34, 26,
+      10, 24, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110,
+      100, 112, 111, 105, 110, 116, 82, 101, 115, 112, 111,
+      110, 115, 101, 34, 110, 10, 7, 83, 101, 114, 118, 105,
+      99, 101, 18, 12, 10, 4, 110, 97, 109, 101, 24, 1, 32, 1,
+      40, 9, 18, 41, 10, 10, 97, 116, 116, 114, 105, 98, 117,
+      116, 101, 115, 24, 2, 32, 3, 40, 11, 50, 21, 46, 115,
+      100, 46, 77, 97, 112, 70, 105, 101, 108, 100, 69, 110,
+      116, 114, 121, 95, 49, 95, 49, 18, 42, 10, 11, 110, 97,
+      109, 101, 100, 95, 112, 111, 114, 116, 115, 24, 3, 32,
       3, 40, 11, 50, 21, 46, 115, 100, 46, 77, 97, 112, 70,
       105, 101, 108, 100, 69, 110, 116, 114, 121, 95, 49, 95,
-      49, 34, 57, 10, 17, 77, 97, 112, 70, 105, 101, 108, 100,
+      50, 34, 57, 10, 17, 77, 97, 112, 70, 105, 101, 108, 100,
       69, 110, 116, 114, 121, 95, 49, 95, 49, 18, 11, 10, 3,
       107, 101, 121, 24, 1, 32, 2, 40, 9, 18, 13, 10, 5, 118,
       97, 108, 117, 101, 24, 2, 32, 2, 40, 9, 58, 8, 8, 0, 16,
-      0, 24, 0, 56, 1, 50, 135, 3, 10, 16, 68, 105, 115, 99,
-      111, 118, 101, 114, 121, 83, 101, 114, 118, 105, 99,
-      101, 18, 63, 10, 10, 71, 101, 116, 83, 101, 114, 118,
-      105, 99, 101, 18, 21, 46, 115, 100, 46, 71, 101, 116,
-      83, 101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 26, 22, 46, 115, 100, 46, 71, 101, 116, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 115, 112, 111,
-      110, 115, 101, 40, 0, 48, 0, 18, 72, 10, 13, 67, 114,
-      101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101, 18,
-      24, 46, 115, 100, 46, 67, 114, 101, 97, 116, 101, 83,
-      101, 114, 118, 105, 99, 101, 82, 101, 113, 117, 101,
-      115, 116, 26, 25, 46, 115, 100, 46, 67, 114, 101, 97,
-      116, 101, 83, 101, 114, 118, 105, 99, 101, 82, 101, 115,
-      112, 111, 110, 115, 101, 40, 0, 48, 0, 18, 69, 10, 12,
+      0, 24, 0, 56, 1, 34, 72, 10, 17, 77, 97, 112, 70, 105,
+      101, 108, 100, 69, 110, 116, 114, 121, 95, 49, 95, 50,
+      18, 11, 10, 3, 107, 101, 121, 24, 1, 32, 2, 40, 9, 18,
+      28, 10, 5, 118, 97, 108, 117, 101, 24, 2, 32, 2, 40, 11,
+      50, 13, 46, 115, 100, 46, 78, 97, 109, 101, 100, 80,
+      111, 114, 116, 58, 8, 8, 0, 16, 0, 24, 0, 56, 1, 50,
+      209, 3, 10, 16, 68, 105, 115, 99, 111, 118, 101, 114,
+      121, 83, 101, 114, 118, 105, 99, 101, 18, 63, 10, 10,
+      71, 101, 116, 83, 101, 114, 118, 105, 99, 101, 18, 21,
+      46, 115, 100, 46, 71, 101, 116, 83, 101, 114, 118, 105,
+      99, 101, 82, 101, 113, 117, 101, 115, 116, 26, 22, 46,
+      115, 100, 46, 71, 101, 116, 83, 101, 114, 118, 105, 99,
+      101, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48,
+      0, 18, 72, 10, 13, 67, 114, 101, 97, 116, 101, 83, 101,
+      114, 118, 105, 99, 101, 18, 24, 46, 115, 100, 46, 67,
+      114, 101, 97, 116, 101, 83, 101, 114, 118, 105, 99, 101,
+      82, 101, 113, 117, 101, 115, 116, 26, 25, 46, 115, 100,
+      46, 67, 114, 101, 97, 116, 101, 83, 101, 114, 118, 105,
+      99, 101, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0,
+      48, 0, 18, 69, 10, 12, 76, 105, 115, 116, 83, 101, 114,
+      118, 105, 99, 101, 115, 18, 23, 46, 115, 100, 46, 76,
+      105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115, 82,
+      101, 113, 117, 101, 115, 116, 26, 24, 46, 115, 100, 46,
       76, 105, 115, 116, 83, 101, 114, 118, 105, 99, 101, 115,
-      18, 23, 46, 115, 100, 46, 76, 105, 115, 116, 83, 101,
-      114, 118, 105, 99, 101, 115, 82, 101, 113, 117, 101,
-      115, 116, 26, 24, 46, 115, 100, 46, 76, 105, 115, 116,
-      83, 101, 114, 118, 105, 99, 101, 115, 82, 101, 115, 112,
-      111, 110, 115, 101, 40, 0, 48, 0, 18, 78, 10, 15, 76,
-      111, 111, 107, 117, 112, 69, 110, 100, 112, 111, 105,
-      110, 116, 115, 18, 26, 46, 115, 100, 46, 76, 111, 111,
-      107, 117, 112, 69, 110, 100, 112, 111, 105, 110, 116,
-      115, 82, 101, 113, 117, 101, 115, 116, 26, 27, 46, 115,
-      100, 46, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112,
-      111, 105, 110, 116, 115, 82, 101, 115, 112, 111, 110,
-      115, 101, 40, 0, 48, 0, 18, 81, 10, 16, 82, 101, 103,
-      105, 115, 116, 101, 114, 69, 110, 100, 112, 111, 105,
-      110, 116, 18, 27, 46, 115, 100, 46, 82, 101, 103, 105,
-      115, 116, 101, 114, 69, 110, 100, 112, 111, 105, 110,
-      116, 82, 101, 113, 117, 101, 115, 116, 26, 28, 46, 115,
-      100, 46, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110,
-      100, 112, 111, 105, 110, 116, 82, 101, 115, 112, 111,
-      110, 115, 101, 40, 0, 48, 0, 98, 6, 112, 114, 111, 116,
-      111, 51>>;
+      82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 18,
+      72, 10, 13, 65, 100, 100, 78, 97, 109, 101, 100, 80,
+      111, 114, 116, 115, 18, 24, 46, 115, 100, 46, 65, 100,
+      100, 78, 97, 109, 101, 100, 80, 111, 114, 116, 115, 82,
+      101, 113, 117, 101, 115, 116, 26, 25, 46, 115, 100, 46,
+      65, 100, 100, 78, 97, 109, 101, 100, 80, 111, 114, 116,
+      115, 82, 101, 115, 112, 111, 110, 115, 101, 40, 0, 48,
+      0, 18, 78, 10, 15, 76, 111, 111, 107, 117, 112, 69, 110,
+      100, 112, 111, 105, 110, 116, 115, 18, 26, 46, 115, 100,
+      46, 76, 111, 111, 107, 117, 112, 69, 110, 100, 112, 111,
+      105, 110, 116, 115, 82, 101, 113, 117, 101, 115, 116,
+      26, 27, 46, 115, 100, 46, 76, 111, 111, 107, 117, 112,
+      69, 110, 100, 112, 111, 105, 110, 116, 115, 82, 101,
+      115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 18, 81, 10,
+      16, 82, 101, 103, 105, 115, 116, 101, 114, 69, 110, 100,
+      112, 111, 105, 110, 116, 18, 27, 46, 115, 100, 46, 82,
+      101, 103, 105, 115, 116, 101, 114, 69, 110, 100, 112,
+      111, 105, 110, 116, 82, 101, 113, 117, 101, 115, 116,
+      26, 28, 46, 115, 100, 46, 82, 101, 103, 105, 115, 116,
+      101, 114, 69, 110, 100, 112, 111, 105, 110, 116, 82,
+      101, 115, 112, 111, 110, 115, 101, 40, 0, 48, 0, 98, 6,
+      112, 114, 111, 116, 111, 51>>;
 descriptor(X) -> error({gpb_error, {badname, X}}).
 
 

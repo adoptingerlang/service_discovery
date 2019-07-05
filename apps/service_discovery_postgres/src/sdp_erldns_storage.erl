@@ -59,8 +59,8 @@ backup_tables()->
 -spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
     Service = string:split(Key, ".", all) -- [<<"svc">>, <<"cluster">>, <<"local">>],
-    case sdp_services_storage:read(Service) of
-        {error, not_found}->
+    case sdp_services_storage:read(iolist_to_binary(Service)) of
+        {error, _}->
            [];
         #{named_ports := NamedPorts,
           endpoints := Endpoints} ->

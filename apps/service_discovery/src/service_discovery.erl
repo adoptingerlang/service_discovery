@@ -14,7 +14,8 @@
 -type attributes() :: #{unicode:unicode_binary() => unicode:unicode_binary()}.
 -type service() :: #{name := name(),
                      attributes := attributes(),
-                     named_ports := named_ports()}.
+                     endpoints => [endpoint()],
+                     named_ports => named_ports()}.
 
 -type tag() :: unicode:unicode_binary().
 -type endpoint() :: #{service_name := name(),
