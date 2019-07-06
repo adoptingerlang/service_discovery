@@ -1,5 +1,7 @@
 -module(sdp_services_storage).
 
+-behaviour(sd_storage).
+
 -export([create/1,
          register/2,
          add_named_ports/2,

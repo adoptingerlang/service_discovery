@@ -7,7 +7,8 @@
    [kernel,
     stdlib,
     eql,
-    pgo
+    pgo,
+    service_discovery
    ]},
   {env,[{db_config, #{host => "localhost",
                       port => 5432,
