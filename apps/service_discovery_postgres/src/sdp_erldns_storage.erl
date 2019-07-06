@@ -58,23 +58,27 @@ backup_tables()->
 
 -spec select(Table :: atom(), Key :: term()) -> [tuple()] | {error, not_implemented}.
 select(zones, Key)->
-    Service = string:split(Key, ".", all) -- [<<"svc">>, <<"cluster">>, <<"local">>],
-    case sdp_services_storage:read(iolist_to_binary(Service)) of
-        {error, _}->
-           [];
-        #{named_ports := NamedPorts,
-          endpoints := Endpoints} ->
-            Version = <<>>,
-            Authorities = ?SOA(Key),
-            SrvRecords = named_ports_to_srv_records(Key, NamedPorts),
-            Records = SrvRecords ++ endpoints_to_a_records(Key, Endpoints),
-            [{Key, #zone{name=Key,
-                         version=Version,
-                         authority=Authorities,
-                         record_count = length(Records),
-                         records=Records,
-                         records_by_name=erldns_zone_cache:build_named_index(Records),
-                         keysets=[]}}]
+    case string:split(Key, ".", all) -- [<<"svc">>, <<"cluster">>, <<"local">>] of
+        [Service] ->
+            case sdp_services_storage:read(Service) of
+                {error, _}->
+                    [];
+                #{named_ports := NamedPorts,
+                  endpoints := Endpoints} ->
+                    Version = <<>>,
+                    Authorities = ?SOA(Key),
+                    SrvRecords = named_ports_to_srv_records(Key, NamedPorts),
+                    Records = SrvRecords ++ endpoints_to_a_records(Key, Endpoints),
+                    [{Key, #zone{name=Key,
+                                 version=Version,
+                                 authority=Authorities,
+                                 record_count = length(Records),
+                                 records=Records,
+                                 records_by_name=erldns_zone_cache:build_named_index(Records),
+                                 keysets=[]}}]
+            end;
+        _ ->
+            []
     end;
 select(_Table, _Key)->
     {error, not_implemented}.

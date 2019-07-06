@@ -23,4 +23,14 @@ create_service(_Config) ->
                                        attributes => ServiceAttributes}),
     ?assertMatch(#{name := ServiceName,
                    attributes := ServiceAttributes}, service_discovery:lookup(ServiceName)),
+
+    service_discovery:register(ServiceName, #{ip => {127,0,0,1},
+                                              tags => []}),
+    ?assertMatch([{127,0,0,1}], dns_a_lookup(ServiceName)),
+
     ok.
+
+%%
+
+dns_a_lookup(ServiceName) ->
+    inet_res:lookup(binary_to_list(ServiceName), in, a, [{nameservers, [{{127,0,0,1}, 8053}]}]).

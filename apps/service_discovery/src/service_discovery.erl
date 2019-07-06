@@ -18,7 +18,7 @@
                      named_ports => named_ports()}.
 
 -type tag() :: unicode:unicode_binary().
--type endpoint() :: #{service_name := name(),
+-type endpoint() :: #{service_name => name(),
                       ip := inet:ip_address(),
                       tags := [tag()]}.
 
