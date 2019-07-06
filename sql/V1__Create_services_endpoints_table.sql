@@ -1,10 +1,11 @@
 CREATE EXTENSION IF NOT EXISTS hstore;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION citext;
 
 CREATE TABLE services
     (
         id UUID NOT NULL DEFAULT gen_random_uuid(),
-        name TEXT UNIQUE NOT NULL,
+        name CITEXT UNIQUE NOT NULL,
         attributes HSTORE NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -14,8 +15,8 @@ CREATE TABLE services
 CREATE TABLE named_ports
     (
         service_id UUID NOT NULL REFERENCES services (id) ON DELETE CASCADE,
-        port_name TEXT NOT NULL,
-        protocol TEXT NOT NULL,
+        port_name CITEXT NOT NULL,
+        protocol CITEXT NOT NULL,
         port INT2 NOT NULL,
         CHECK (port > 0 AND port < 65536),
         PRIMARY KEY (service_id, port_name)

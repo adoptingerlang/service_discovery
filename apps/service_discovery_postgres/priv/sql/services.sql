@@ -18,7 +18,7 @@ SELECT
 FROM services
 
 -- :insert_service
-INSERT INTO services (name, attributes) VALUES (lower($1), $2) RETURNING (id)
+INSERT INTO services (name, attributes) VALUES ($1, $2) RETURNING (id)
 
 -- :insert_endpoint
 INSERT INTO endpoints (service_id, ip, tags)
@@ -26,7 +26,7 @@ VALUES ((SELECT id FROM services WHERE name = $1), $2, $3)
 
 -- :insert_named_ports
 INSERT INTO named_ports (service_id, port_name, protocol, port)
-SELECT (SELECT id FROM services WHERE name = $1), lower(p.port_name), lower(p.protocol), p.port
+SELECT (SELECT id FROM services WHERE name = $1), p.port_name, p.protocol, p.port
 FROM UNNEST($2::named_ports[]) AS p(service_id, port_name, protocol, port)
 
 -- :select_endpoints

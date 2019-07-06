@@ -8,4 +8,4 @@ random_service_name() ->
 
 random_name(Prefix) ->
     Str = re:replace(base64:encode(crypto:strong_rand_bytes(8)), "\\W", "x",[global, {return,binary}]),
-    string:casefold(<<Prefix/binary, Str/binary>>).
+    <<Prefix/binary, Str/binary>>.
