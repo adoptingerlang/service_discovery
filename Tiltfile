@@ -13,4 +13,4 @@ custom_build(
 )
 
 # docker_compose("./docker-compose.yml")
-k8s_yaml(kustomize('deployment/dev'))
+k8s_yaml(kustomize('deployment/overlays/dev'))
