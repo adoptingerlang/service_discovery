@@ -6,7 +6,8 @@
   {applications,
    [kernel,
     stdlib,
-    erldns
+    erldns,
+    service_discovery_storage
    ]},
   {env,[]},
   {modules, []},

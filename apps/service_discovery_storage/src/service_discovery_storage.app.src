@@ -1,0 +1,14 @@
+{application, service_discovery_storage,
+ [{description, "Library for abstracting out the service discovery storage layer"},
+  {vsn, {git, short}},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.

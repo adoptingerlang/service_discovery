@@ -1,6 +1,6 @@
 -module(sdp_services_storage).
 
--behaviour(sd_storage).
+-behaviour(service_discovery_storage).
 
 -export([create/1,
          register/2,
