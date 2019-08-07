@@ -30,24 +30,24 @@
 
 -spec create(service()) -> binary() | {error, term()}.
 create(Service) ->
-    sd_storage:create(Service).
+    sds_storage:create(Service).
 
 -spec lookup(unicode:unicode_binary()) -> service() | {error, term()}.
 lookup(ServiceName) ->
-    sd_storage:read(ServiceName).
+    sds_storage:read(ServiceName).
 
 -spec lookup_endpoints(unicode:unicode_binary()) -> [endpoint()] | {error, term()}.
 lookup_endpoints(ServiceName) ->
-    sd_storage:read_endpoints(ServiceName).
+    sds_storage:read_endpoints(ServiceName).
 
 -spec add_named_ports(unicode:unicode_binary(), named_ports()) -> ok | {error, term()}.
 add_named_ports(ServiceName, NamedPorts) ->
-    sd_storage:add_named_ports(ServiceName, NamedPorts).
+    sds_storage:add_named_ports(ServiceName, NamedPorts).
 
 -spec list() -> [service()] | {error, term()}.
 list() ->
-    sd_storage:list().
+    sds_storage:list().
 
 -spec register(name(), endpoint()) -> ok.
 register(ServiceName, Endpoint) ->
-    sd_storage:register(ServiceName, Endpoint).
+    sds_storage:register(ServiceName, Endpoint).

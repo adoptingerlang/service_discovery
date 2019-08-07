@@ -1,4 +1,6 @@
--module(sd_storage).
+-module(sds_storage).
+
+-behaviour(service_discovery_storage).
 
 -export([configure_storage/1,
          create/1,
