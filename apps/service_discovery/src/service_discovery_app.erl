@@ -16,7 +16,7 @@
 
 start(_StartType, _StartArgs) ->
     {ok, StorageMod} = application:get_env(service_discovery, storage_module),
-    sd_storage:configure_storage(StorageMod),
+    sds_storage:configure_storage(StorageMod),
     service_discovery_sup:start_link().
 
 %%--------------------------------------------------------------------

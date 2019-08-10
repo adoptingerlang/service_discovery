@@ -34,8 +34,8 @@ workflows:
                 command: |
                   if [ ! -f "/tmp/flyway-5.2.4/flyway" ]; then
                     wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/5.2.4/flyway-commandline-5.2.4-linux-x64.tar.gz | tar xvz -C /tmp
-                    /tmp/flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
                   fi
+                  /tmp/flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
             - save_cache:
                 key: flyway-5.2.4-1
                 paths:

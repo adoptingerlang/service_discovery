@@ -8,6 +8,7 @@
     stdlib,
     eql,
     pgo,
+    service_discovery_storage,
     service_discovery
    ]},
   {env,[{db_config, #{host => "localhost",
