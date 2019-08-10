@@ -14,8 +14,22 @@ executors:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: discovery
 
+jobs:
+  docker-build-and-publish:
+    executor: docker/machine
+    steps:
+      - checkout
+      - gcp-gcr/gcr-auth
+      - docker/build:
+          dockerfile: Dockerfile.cb
+          registry: gcr.io
+          image: $GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: latest
+      - gcp-gcr/push-image:
+          image: $CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+
 workflows:
-  build-test:
+  build-test-publish:
     jobs:
       - rebar3/compile
       - rebar3/xref:
@@ -46,3 +60,11 @@ workflows:
       - rebar3/cover:
           requires:
             - rebar3/ct
+
+      - docker-build-and-publish:
+          requires:
+            - rebar3/ct
+          filters:
+            branches:
+              only:
+              - master

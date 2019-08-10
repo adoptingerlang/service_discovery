@@ -5,27 +5,31 @@ FROM erlang:22-alpine as builder
 # add any other Alpine libraries needed to compile the project here
 RUN apk add --no-cache git
 
-WORKDIR /src
+WORKDIR /app/src
+
+COPY rebar3 /usr/local/bin/
+
+ENV REBAR_BASE_DIR /app/_build
 
 # build and cache dependencies as their own layer
 COPY rebar.config rebar.lock .
-RUN --mount=type=cache,target=/root/.cache/rebar3 rebar3 compile
+RUN --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+    rebar3 compile
 
-COPY . .
-RUN --mount=type=cache,target=/root/.cache/rebar3 \
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
     rebar3 compile
 
 FROM builder as releaser
 
 # tar for unpacking the target system
-RUN apk add --no-cache tar
+RUN apk add --no-cache tar && \
+    mkdir -p /opt/rel
 
-WORKDIR /src
-RUN mkdir -p /opt/rel
-
-RUN --mount=type=cache,target=/root/.cache/rebar3 \
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
     rebar3 as prod tar && \
-    tar -zxvf /src/_build/prod/rel/*/*.tar.gz -C /opt/rel
+    tar -zxvf $REBAR_BASE_DIR/prod/rel/*/*.tar.gz -C /opt/rel
 
 FROM alpine:3.9 as runner
 
@@ -46,7 +50,7 @@ CMD ["foreground"]
 
 FROM builder as plt
 
-RUN --mount=type=cache,target=/root/.cache/rebar3 \
+RUN --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
     rebar3 dialyzer --plt-location /root/.cache/rebar3 \
     --plt-prefix deps \
     --base-plt-prefix otp
@@ -54,3 +58,13 @@ RUN --mount=type=cache,target=/root/.cache/rebar3 \
 ENTRYPOINT ["rebar3"]
 
 CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]
+
+FROM builder as devrel
+
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+    rebar3 release
+
+ENTRYPOINT ["/src/_build/default/rel/service_discovery/bin/service_discovery-dev"]
+
+CMD ["foreground"]

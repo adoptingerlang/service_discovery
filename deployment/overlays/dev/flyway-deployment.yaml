@@ -29,7 +29,7 @@ spec:
           mountPath: /flyway/sql
 
       - name: service-discovery
-        image: service_discovery
+        image: service_discovery-sql
         volumeMounts:
           - name: migrations
             mountPath: /flyway/sql

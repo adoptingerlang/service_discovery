@@ -12,6 +12,9 @@
 handle(Req, _Args) ->
     handle(Req#req.method, elli_request:path(Req), Req).
 
+handle('GET',[<<"healthz">>], _Req) ->
+    {ok, [], <<>>};
+
 handle('GET',[<<"services">>], Req) ->
     Services = service_discovery:list(),
     ServicesJson = json_encode_services(is_pretty(Req), Services),

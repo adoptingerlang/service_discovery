@@ -6,6 +6,15 @@ spec:
   selector:
     app: service-discovery
   ports:
-  - protocol: UDP
+  - name: dns
+    protocol: UDP
     port: 8053
-    targetPort: 8053
+    targetPort: dns
+  - name: http
+    protocol: TCP
+    port: 3000
+    targetPort: http
+  - name: grpc
+    protocol: TCP
+    port: 8081
+    targetPort: grpc
