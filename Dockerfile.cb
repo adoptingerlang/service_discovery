@@ -6,10 +6,12 @@ FROM $BASE_IMAGE as builder
 # add any other Alpine libraries needed to compile the project here
 RUN apk add --no-cache git
 
+COPY rebar3 /usr/local/bin/
+
 WORKDIR /src
 
 # build and cache dependencies as their own layer
-COPY rebar.config rebar.lock .
+COPY rebar.config rebar.lock ./
 RUN rebar3 compile
 
 FROM builder as releaser
@@ -43,12 +45,12 @@ ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 
 CMD ["foreground"]
 
-FROM builder as plt
+# FROM builder as plt
 
-RUN rebar3 dialyzer --plt-location /root/.cache/rebar3 \
-    --plt-prefix deps \
-    --base-plt-prefix otp
+# RUN rebar3 dialyzer --plt-location /root/.cache/rebar3 \
+#     --plt-prefix deps \
+#     --base-plt-prefix otp
 
-ENTRYPOINT ["rebar3"]
+# ENTRYPOINT ["rebar3"]
 
-CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]
+# CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]
