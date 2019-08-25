@@ -18,7 +18,7 @@ steps:
 - name: 'gcr.io/kaniko-project/executor:latest'
   args:
   - --target=runner
-  - --dockerfile=./Dockerfile.cb
+  - --dockerfile=./ci/Dockerfile.cb
   - --build-arg=BASE_IMAGE=$_BASE_IMAGE
   - --build-arg=RUNNER_IMAGE=$_RUNNER_IMAGE
   - --destination=gcr.io/$PROJECT_ID/service_discovery:$COMMIT_SHA

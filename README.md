@@ -3,8 +3,7 @@ service_discovery
 
 This project contains applications for creating and updating services over HTTP and grpc that can be queried through DNS. The provided backing storage is through Postgres.
 
-Run
------
+## Running Locally
 
 A Postgres instance can be started and have the migrations in the directory `sql/` run on it with `docker-compose`:
 
@@ -42,3 +41,8 @@ webapp.svc.cluster.local. 3600 IN	A	127.0.0.1
 ```
 
     
+## Running in Kubernetes Locally
+
+``` shell
+$ tilt up
+```

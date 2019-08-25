@@ -45,26 +45,39 @@ ENV COOKIE service_discovery
 ENV RELX_OUT_FILE_PATH /tmp
 
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
-
 CMD ["foreground"]
 
+# image for running common test suites
+FROM builder as tester
+
+RUN apk add --no-cache py-pip python-dev libffi-dev openssl-dev gcc libc-dev make && \
+    pip install docker-compose
+
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+    rebar3 as test compile
+
+ENTRYPOINT ["rebar3"]
+CMD ["ct"]
+
+# image for caching dialyzer plt
 FROM builder as plt
 
-RUN --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
     rebar3 dialyzer --plt-location /root/.cache/rebar3 \
     --plt-prefix deps \
     --base-plt-prefix otp
 
 ENTRYPOINT ["rebar3"]
-
 CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]
 
+# image to use in tilt when running the release
 FROM builder as devrel
 
 RUN --mount=target=. \
     --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
     rebar3 release
 
-ENTRYPOINT ["/src/_build/default/rel/service_discovery/bin/service_discovery-dev"]
-
+ENTRYPOINT ["/src/_build/default/rel/service_discovery/bin/service_discovery"]
 CMD ["foreground"]

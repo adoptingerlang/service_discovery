@@ -8,6 +8,15 @@
 all() ->
     [create_service].
 
+suite() ->
+    %% don't use compose hook in circleci
+    case os:getenv("CI") of
+        false ->
+            [{ct_hooks, [docker_compose_cth]}];
+        _ ->
+            []
+    end.
+
 init_per_suite(Config) ->
     {ok, _} = application:ensure_all_started(service_discovery_postgres),
     Config.
