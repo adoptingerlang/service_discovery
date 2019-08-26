@@ -1,12 +1,10 @@
-ARG BASE_IMAGE=erlang:22.0.2-alpine
+ARG BASE_IMAGE=erlang:22.0.7-alpine
 ARG RUNNER_IMAGE=alpine:3.9
 FROM $BASE_IMAGE as builder
 
 # git for fetching non-hex depenencies
 # add any other Alpine libraries needed to compile the project here
 RUN apk add --no-cache git
-
-COPY rebar3 /usr/local/bin/
 
 WORKDIR /src
 
@@ -44,13 +42,3 @@ ENV RELX_OUT_FILE_PATH /tmp
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 
 CMD ["foreground"]
-
-# FROM builder as plt
-
-# RUN rebar3 dialyzer --plt-location /root/.cache/rebar3 \
-#     --plt-prefix deps \
-#     --base-plt-prefix otp
-
-# ENTRYPOINT ["rebar3"]
-
-# CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]

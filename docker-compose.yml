@@ -10,8 +10,6 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
     - pgdata:/var/lib/postgresql/data
-    networks:
-      - sd_net
 
   flyway:
     image: boxfuse/flyway:5.2.4
@@ -25,12 +23,6 @@ services:
     - ./apps/service_discovery_postgres/priv/migrations:/flyway/sql
     depends_on:
     - postgres
-    networks:
-      - sd_net
-
-networks:
-  sd_net:
-    driver: bridge
 
 volumes:
   pgdata:
