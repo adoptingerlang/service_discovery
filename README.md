@@ -3,7 +3,7 @@ service_discovery
 
 This project contains applications for creating and updating services over HTTP and grpc that can be queried through DNS. The provided backing storage is through Postgres.
 
-**Disclaimer:** The purpose of creating this project was the need writing [Adopting Erlang](https://adoptingerlang.org/) had for a "real-world-esque" project to show the development and production patterns, structure and workflow we use. However, some decisions are made for the purpose of demostration and not because we sat down and determined a certain strategy was optimal for some use case. The use of Postgres as the default storage backend is an example of this. This doesn't mean Postgres isn't a perfectly valid solution for a service discovery backend, and for many use cases even an optimal backend. The point is that it was chosen so that working with Postgres connections, queries and migrations from Erlang could be covered.
+**Disclaimer:** The purpose of creating this project was the need [Adopting Erlang](https://adoptingerlang.org/) had for a "real-world-esque" project to show the development and production patterns, structure and workflow we use. However, some decisions are made for the purpose of demonstration only, and not because we sat down and determined a certain strategy was optimal for some use case. The use of Postgres as the default storage backend is an example of this. This doesn't mean Postgres isn't a perfectly valid solution for a service discovery backend, and for many use cases even an optimal backend. The point is that it was chosen so that working with Postgres connections, queries and migrations from Erlang could be covered.
 
 ## Running Locally
 
