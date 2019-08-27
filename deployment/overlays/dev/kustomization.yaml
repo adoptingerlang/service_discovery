@@ -1,3 +1,5 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 namespace: service-discovery-dev
 nameSuffix: -dev
 commonLabels:
@@ -8,13 +10,18 @@ images:
 - name: service_discovery
   newTag: latest
 resources:
-- flyway-deployment.yaml
 - postgres-deployment.yaml
 - postgres-service.yaml
 - pgdata-persistentvolumeclaim.yaml
+patchesStrategicMerge:
+- flyway_job_patch.yaml
 vars:
-- name: POSTGRES_SERVICE
+- fieldref: {}
+  name: POSTGRES_SERVICE
   objref:
+    apiVersion: v1
     kind: Service
     name: postgres
-    apiVersion: v1
+configMapGenerator:
+- name: configmap
+  env: dev.env

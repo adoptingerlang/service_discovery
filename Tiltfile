@@ -2,7 +2,7 @@ allow_k8s_contexts("microk8s")
 default_registry('127.0.0.1:32000')
 
 custom_build(
-    'service_discovery-sql',
+    'service_discovery_sql',
     'docker build --target builder --tag $EXPECTED_REF .',
     ['apps/service_discovery_postgres/priv/migrations'],
     live_update=[

@@ -1,34 +1,28 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  labels:
-    service: flyway
-  name: flyway
+  name: service-discovery
 spec:
-  ttlSecondsAfterFinished: 100
+  replicas: 1
   template:
-    metadata:
-      labels:
-        service: flyway
     spec:
-      restartPolicy: OnFailure
       volumes:
       - name: migrations
         emptyDir: {}
-      containers:
+      initContainers:
       - args:
         - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
         - -user=discovery
         - -password=password
         - -connectRetries=60
-        - migrate
+        - validate
         image: boxfuse/flyway:5.2.4
-        name: flyway
+        name: flyway-validate
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
 
-      - name: service-discovery
+      - name: service-discovery-sql
         image: service_discovery-sql
         volumeMounts:
           - name: migrations
