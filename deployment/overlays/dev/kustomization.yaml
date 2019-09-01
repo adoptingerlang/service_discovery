@@ -9,19 +9,8 @@ bases:
 images:
 - name: service_discovery
   newTag: latest
-resources:
-- postgres-deployment.yaml
-- postgres-service.yaml
-- pgdata-persistentvolumeclaim.yaml
 patchesStrategicMerge:
 - flyway_job_patch.yaml
-vars:
-- fieldref: {}
-  name: POSTGRES_SERVICE
-  objref:
-    apiVersion: v1
-    kind: Service
-    name: postgres
 configMapGenerator:
 - name: configmap
   env: dev.env

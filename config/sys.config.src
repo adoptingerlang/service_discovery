@@ -1,7 +1,7 @@
 [
  {service_discovery, [{storage_module, sdp_services_storage}]},
 
- {service_discovery_postgres, [{db_config, #{host => "localhost",
+ {service_discovery_postgres, [{db_config, #{host => "${DB_HOST}",
                                              port => 5432,
                                              user => "discovery",
                                              password => "password",

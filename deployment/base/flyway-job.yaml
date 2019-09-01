@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    service: flyway
+  name: flyway
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        service: flyway
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+      - name: migrations
+        emptyDir: {}
+      containers:
+      - args:
+        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
+        - -user=discovery
+        - -password=password
+        - -connectRetries=60
+        - migrate
+        image: flyway/flyway:6-alpine
+        name: flyway
+        volumeMounts:
+        - name: migrations
+          mountPath: /flyway/sql
+
+      - name: service-discovery-sql
+        image: service_discovery
+        volumeMounts:
+          - name: migrations
+            mountPath: /flyway/sql
+        command: ["/bin/sh"]
+        args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]

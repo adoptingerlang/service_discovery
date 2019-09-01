@@ -18,7 +18,7 @@ custom_build(
     live_update=[
         sync('apps', '/app/src/apps'),
         run('./rebar3 compile'),
-        run('/app/src/_build/default/rel/service_discovery/bin/service_discovery-dev restart')
+        run('/app/src/_build/default/rel/service_discovery/bin/service_discovery restart')
     ],
     ignore=["rebar.lock"]
 )

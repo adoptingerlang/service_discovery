@@ -10,3 +10,13 @@ resources:
 - deployment.yaml
 - service.yaml
 - flyway-job.yaml
+- postgres-deployment.yaml
+- postgres-service.yaml
+- pgdata-persistentvolumeclaim.yaml
+vars:
+- fieldref: {}
+  name: POSTGRES_SERVICE
+  objref:
+    apiVersion: v1
+    kind: Service
+    name: postgres

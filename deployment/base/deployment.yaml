@@ -19,7 +19,9 @@ spec:
         - containerPort: 8081
           protocol: TCP
           name: grpc
-
+        env:
+        - name: DB_HOST
+          value: $(POSTGRES_SERVICE)
         envFrom:
         - configMapRef:
             name: configmap
@@ -37,3 +39,4 @@ spec:
             port: 3000
           initialDelaySeconds: 3
           periodSeconds: 10
+      
