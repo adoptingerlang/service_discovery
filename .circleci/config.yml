@@ -2,6 +2,8 @@ version: 2.1
 
 orbs:
   rebar3: tsloughter/rebar3@0.7.0
+  gcp-gcr: circleci/gcp-gcr@0.6.0
+  docker: circleci/docker@0.5.13
 
 executors:
   erlang_postgres:
@@ -14,8 +16,26 @@ executors:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: discovery
 
+jobs:
+  docker-build-and-push:
+    executor: docker/machine
+    steps:
+      - run:
+          name: Install latest Docker
+          command: |
+            sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+            sudo apt-get update
+            sudo apt-get install docker-ce
+            docker version
+      - checkout
+      - gcp-gcr/gcr-auth
+      - run:
+          name: Build and push images
+          command: |
+            ci/build_image.sh -p -t runner -r gcr.io/adoptingerlang
+
 workflows:
-  build-test:
+  build-test-maybe-publish:
     jobs:
       - rebar3/compile
       - rebar3/xref:
@@ -31,11 +51,17 @@ workflows:
             - restore_cache:
                 keys: flyway-5.2.4-1
             - run:
+                name: Run SQL migrations
                 command: |
                   if [ ! -f "/tmp/flyway-5.2.4/flyway" ]; then
                     wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/5.2.4/flyway-commandline-5.2.4-linux-x64.tar.gz | tar xvz -C /tmp
                   fi
-                  /tmp/flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery -user=discovery -password=password -connectRetries=60 -locations=filesystem:sql migrate
+                  /tmp/flyway-5.2.4/flyway -url=jdbc:postgresql://localhost:5432/discovery \
+                                           -user=discovery \
+                                           -password=password \
+                                           -connectRetries=60 \
+                                           -locations=filesystem:apps/service_discovery_postgres/priv/migrations \
+                                           migrate
             - save_cache:
                 key: flyway-5.2.4-1
                 paths:
@@ -46,3 +72,11 @@ workflows:
       - rebar3/cover:
           requires:
             - rebar3/ct
+
+      - docker-build-and-push:
+          requires:
+            - rebar3/ct
+          filters:
+            branches:
+              only:
+              - master

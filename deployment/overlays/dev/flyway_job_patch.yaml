@@ -1,0 +1,14 @@
+# For tilt we make an image named service_discovery_sql with the migrations.
+# This patch replaces the image used in the flyway migration job to match.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    service: flyway
+  name: flyway
+spec:
+  template:
+    spec:
+      containers:
+      - name: service-discovery-sql
+        image: service_discovery_sql

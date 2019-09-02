@@ -74,7 +74,7 @@ select(zones, Key)->
                                  authority=Authorities,
                                  record_count = length(Records),
                                  records=Records,
-                                 records_by_name=erldns_zone_cache:build_named_index(Records),
+                                 records_by_name=build_named_index(Records),
                                  keysets=[]}}]
             end;
         _ ->
@@ -82,6 +82,14 @@ select(zones, Key)->
     end;
 select(_Table, _Key)->
     {error, not_implemented}.
+
+-spec(build_named_index([#dns_rr{}]) -> #{binary() => [#dns_rr{}]}).
+build_named_index(Records) ->
+    Idx0 = lists:foldl(fun (R, Idx) ->
+                               Name = erldns:normalize_name(R#dns_rr.name),
+                               maps:update_with(Name, fun (RR) -> [R | RR] end, [R], Idx)
+                       end, #{}, Records),
+    maps:map(fun (_K, V) -> lists:reverse(V) end, Idx0).
 
 -spec select(atom(), list(), infinite | integer()) -> [tuple()] | {error, not_implemented}.
 select(_Table, _MatchSpec, _Limit) ->

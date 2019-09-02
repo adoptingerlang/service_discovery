@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=erlang:22.0.2-alpine
+ARG BASE_IMAGE=erlang:22.0.7-alpine
 ARG RUNNER_IMAGE=alpine:3.9
 FROM $BASE_IMAGE as builder
 
@@ -9,7 +9,7 @@ RUN apk add --no-cache git
 WORKDIR /src
 
 # build and cache dependencies as their own layer
-COPY rebar.config rebar.lock .
+COPY rebar.config rebar.lock ./
 RUN rebar3 compile
 
 FROM builder as releaser
@@ -42,13 +42,3 @@ ENV RELX_OUT_FILE_PATH /tmp
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 
 CMD ["foreground"]
-
-FROM builder as plt
-
-RUN rebar3 dialyzer --plt-location /root/.cache/rebar3 \
-    --plt-prefix deps \
-    --base-plt-prefix otp
-
-ENTRYPOINT ["rebar3"]
-
-CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]

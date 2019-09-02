@@ -22,13 +22,13 @@ spec:
         - -password=password
         - -connectRetries=60
         - migrate
-        image: boxfuse/flyway:5.2.4
+        image: flyway/flyway:6-alpine
         name: flyway
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
 
-      - name: service-discovery
+      - name: service-discovery-sql
         image: service_discovery
         volumeMounts:
           - name: migrations

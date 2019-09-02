@@ -20,9 +20,26 @@ services:
     - -connectRetries=60
     - migrate
     volumes:
-    - ./apps/service_discovery_postgres/priv/migrations:/flyway/sql
+    - ../../apps/service_discovery_postgres/priv/migrations:/flyway/sql
     depends_on:
     - postgres
+
+  check:
+    image: circleci/postgres:11-alpine-ram
+    entrypoint: /bin/sh
+    command:
+    - -c
+    - |
+      echo -n "Waiting for services table to be available.."
+      while ! psql -q -h postgres -U discovery -d discovery -c 'SELECT 1 from services' >/dev/null 2>&1 ; do
+        echo -n "."
+        sleep 1
+      done
+      echo
+    environment:
+      PGPASSWORD: password
+    depends_on:
+    - flyway
 
 volumes:
   pgdata:

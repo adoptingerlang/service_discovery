@@ -21,6 +21,8 @@ spec:
           value: password
         - name: POSTGRES_USER
           value: discovery
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         image: postgres:11-alpine
         name: postgres
         ports:

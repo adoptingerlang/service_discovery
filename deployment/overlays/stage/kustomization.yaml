@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: service-discovery-stage
+nameSuffix: -stage
+commonLabels:
+  overlay: stage
+bases:
+- ../../base
+images:
+- name: service_discovery
+  newName: gcr.io/adoptingerlang/service_discovery
+  newTag: c7569ec3a4b6ed5d3c261841ab9deb8459693157
+- name: postgres
+  newName: gcr.io/adoptingerlang/postgres
+  newTag: 11-alpine
+- name: flyway/flyway
+  newName: gcr.io/adoptingerlang/flyway
+  newTag: 6-alpine
+configMapGenerator:
+- name: configmap
+  env: stage.env
