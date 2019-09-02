@@ -46,5 +46,19 @@ webapp.svc.cluster.local. 3600 IN	A	127.0.0.1
 ## Running in Kubernetes Locally
 
 ``` shell
+$ microk8s.enable registry
+$ microk8s.enable dns
+``` 
+=/etc/docker/daemon.json=
+
+``` shell
+{
+  ...
+  "insecure-registries" : ["localhost:32000"]
+  ...
+}
+``` 
+
+``` shell
 $ tilt up
 ```

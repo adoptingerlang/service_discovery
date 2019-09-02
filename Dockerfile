@@ -1,13 +1,11 @@
 # syntax = docker/dockerfile:experimental
-FROM erlang:22-alpine as builder
+FROM gcr.io/adoptingerlang/erlang:22.0.7 as builder
 
 # git for fetching non-hex depenencies
 # add any other Alpine libraries needed to compile the project here
 RUN apk add --no-cache git
 
 WORKDIR /app/src
-
-COPY rebar3 /usr/local/bin/
 
 ENV REBAR_BASE_DIR /app/_build
 
