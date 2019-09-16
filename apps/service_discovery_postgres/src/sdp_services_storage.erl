@@ -17,6 +17,8 @@ create(Service) ->
           num_rows := 1,
           rows := [{ServiceId}]} ->
             ServiceId;
+        {error, {pgsql_error, #{code := <<"23505">>}}} ->
+            {error, already_exists};
         {error, _Reason}=Error ->
             Error
     end.
