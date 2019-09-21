@@ -10,6 +10,8 @@ executors:
     docker:
       - image: circleci/erlang:22
         entrypoint: ["/bin/sh"]
+        environment:
+          ERL_FLAGS: "+S 2"
       - image: circleci/postgres:11-alpine-ram
         environment:
           POSTGRES_USER: discovery
@@ -18,7 +20,8 @@ executors:
 
 jobs:
   docker-build-and-push:
-    executor: docker/machine
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - run:
           name: Install latest Docker
@@ -26,13 +29,21 @@ jobs:
             sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
             sudo apt-get update
             sudo apt-get install docker-ce
+
             docker version
+
+            mkdir -p ~/.docker/cli-plugins
+            wget https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
+            mv buildx-v0.3.1.linux-amd64 ~/.docker/cli-plugins/docker-buildx
+            chmod a+x ~/.docker/cli-plugins/docker-buildx
       - checkout
       - gcp-gcr/gcr-auth
       - run:
           name: Build and push images
           command: |
-            ci/build_image.sh -p -t runner -r gcr.io/adoptingerlang
+            # need the docker-container driver for push without load to work
+            ~/.docker/cli-plugins/docker-buildx create --driver docker-container --use
+            ci/build_images.sh -p -t runner -r us.gcr.io/adoptingerlang
 
 workflows:
   build-test-maybe-publish:
@@ -75,8 +86,4 @@ workflows:
 
       - docker-build-and-push:
           requires:
-            - rebar3/ct
-          filters:
-            branches:
-              only:
-              - master
+          - rebar3/ct

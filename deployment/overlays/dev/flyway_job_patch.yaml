@@ -9,6 +9,11 @@ metadata:
 spec:
   template:
     spec:
-      containers:
+      initContainers:
       - name: service-discovery-sql
         image: service_discovery_sql
+        volumeMounts:
+          - name: migrations
+            mountPath: /flyway/sql
+        command: ["/bin/sh"]
+        args: ["-c", "cp /app/sql/* /flyway/sql"]

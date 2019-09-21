@@ -27,7 +27,7 @@ spec:
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
-
+      initContainers:
       - name: service-discovery-sql
         image: service_discovery
         volumeMounts:

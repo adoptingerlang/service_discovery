@@ -2,12 +2,13 @@
 
 set -e
 
+# change working directory to top level of the project
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $SCRIPT_DIR/..
 
 push=false
 target=all
-registry=tsloughter
+registry=
 
 usage() {
     echo "Usage: $0 [-p] [-t {builder|releaser|runner|plt|all}] [-r <registry>]"
@@ -26,7 +27,7 @@ while getopts ":t:r:p" opt; do
             target=$OPTARG
             ;;
         r )
-            registry=$OPTARG
+            registry=$OPTARG/
             ;;
         : )
             echo "Invalid Option: -$OPTARG requires an argument" 1>&2
@@ -43,7 +44,7 @@ shift $((OPTIND -1))
 # must export this so experimental Dockerfile features work
 export DOCKER_BUILDKIT=1
 
-IMAGE=${registry}/service_discovery
+IMAGE=${registry}service_discovery
 BUILD_IMAGE=${IMAGE}:builder
 RELEASER_IMAGE=${IMAGE}:releaser
 PLT_IMAGE=${IMAGE}:plt
@@ -64,29 +65,33 @@ build_and_push() {
     cache_images=( "${cache_images[@]/#/--cache-from=}" )
 
     docker build --target $target --tag $image --cache-from=$image "${cache_images[@]}" \
-           --build-arg BUILDKIT_INLINE_CACHE=true -f Dockerfile .
+           -f Dockerfile .
 
     ! $push || docker push $image
 }
 
 case ${target} in
     all )
-        build_and_push builder "$BUILD_IMAGE-$CHKSUM"
-        build_and_push releaser "$RELEASER_IMAGE-$GIT_REF" "$BUILD_IMAGE-$CHKSUM"
-        build_and_push runner "$IMAGE:$GIT_REF" "$BUILD_IMAGE-$CHKSUM" "$RELEASER_IMAGE-$GIT_REF"
         build_and_push plt "$PLT_IMAGE-$CHKSUM" "$BUILD_IMAGE-$CHKSUM"
+        build_and_push runner "$IMAGE:$GIT_REF" "$BUILD_IMAGE-$CHKSUM" "$RELEASER_IMAGE-$GIT_REF"
+        build_and_push releaser "$RELEASER_IMAGE-$GIT_REF" "$BUILD_IMAGE-$CHKSUM"
+        build_and_push builder "$BUILD_IMAGE-$CHKSUM"
         ;;
     builder )
         build_and_push builder "$BUILD_IMAGE-$CHKSUM"
         ;;
     releaser )
         build_and_push releaser "$RELEASER_IMAGE-$GIT_REF" "$BUILD_IMAGE-$CHKSUM"
+        build_and_push builder "$BUILD_IMAGE-$CHKSUM"
         ;;
     runner )
         build_and_push runner "$IMAGE:$GIT_REF" "$BUILD_IMAGE-$CHKSUM" "$RELEASER_IMAGE-$GIT_REF"
+        build_and_push releaser "$RELEASER_IMAGE-$GIT_REF" "$BUILD_IMAGE-$CHKSUM"
+        build_and_push builder "$BUILD_IMAGE-$CHKSUM"
         ;;
     plt )
         build_and_push plt "$PLT_IMAGE-$CHKSUM" "$BUILD_IMAGE-$CHKSUM"
+        build_and_push builder "$BUILD_IMAGE-$CHKSUM"
         ;;
     * )
         echo "Invalid image target: ${target}" 1>&2

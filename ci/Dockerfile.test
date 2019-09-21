@@ -1,0 +1,46 @@
+# syntax = docker/dockerfile:experimental
+FROM docker.pkg.github.com/adoptingerlang/service_discovery/erlang:22.1.1-alpine as builder
+
+WORKDIR /app/src
+ENV REBAR_BASE_DIR /app/_build
+
+# Install git for fetching non-hex depenencies.
+# Add any other Alpine libraries needed to compile the project here.
+# See https://wiki.alpinelinux.org/wiki/Local_APK_cache for details
+# on the local cache and need for the symlink
+RUN --mount=type=cache,id=apk,sharing=locked,target=/var/cache/apk \
+    ln -s /var/cache/apk /etc/apk/cache && \
+    apk add --update git
+
+# build and cache dependencies as their own layer
+COPY rebar.config rebar.lock .
+RUN --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
+    rebar3 compile
+
+FROM builder as test_compiled
+
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+    rebar3 as test compile
+
+# image for running common test suites
+FROM test_compiled as tester
+
+RUN apk add --no-cache py-pip python-dev libffi-dev openssl-dev gcc libc-dev make && \
+    pip install docker-compose
+
+RUN --mount=target=. \
+    --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
+    rebar3 as test compile
+
+ENTRYPOINT ["rebar3"]
+CMD ["ct"]
+
+# image for caching dialyzer plt
+FROM builder as plt
+
+RUN --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
+    rebar3 dialyzer --succ-typings=false
+
+ENTRYPOINT ["rebar3"]
+CMD ["dialyzer"]

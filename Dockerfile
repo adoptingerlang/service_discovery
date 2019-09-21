@@ -1,81 +1,73 @@
 # syntax = docker/dockerfile:experimental
-FROM gcr.io/adoptingerlang/erlang:22.0.7 as builder
-
-# git for fetching non-hex depenencies
-# add any other Alpine libraries needed to compile the project here
-RUN apk add --no-cache git
+FROM us.gcr.io/adoptingerlang/erlang:22.1.1-alpine as builder
 
 WORKDIR /app/src
-
 ENV REBAR_BASE_DIR /app/_build
+
+# Install git for fetching non-hex depenencies.
+# Add any other Alpine libraries needed to compile the project here.
+# See https://wiki.alpinelinux.org/wiki/Local_APK_cache for details
+# on the local cache and need for the symlink
+RUN --mount=type=cache,id=apk,sharing=locked,target=/var/cache/apk \
+    ln -s /var/cache/apk /etc/apk/cache && \
+    apk add --update git
 
 # build and cache dependencies as their own layer
 COPY rebar.config rebar.lock .
-RUN --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+RUN --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
     rebar3 compile
+
+FROM builder as prod_compiled
 
 RUN --mount=target=. \
-    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
-    rebar3 compile
+    --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
+    rebar3 as prod compile
 
-FROM builder as releaser
+FROM prod_compiled as releaser
+
+# create the directory to unpack the release to
+RUN mkdir -p /opt/rel
 
 # tar for unpacking the target system
-RUN apk add --no-cache tar && \
-    mkdir -p /opt/rel
+RUN --mount=type=cache,id=apk,sharing=locked,target=/var/cache/apk \
+    apk add --update tar
 
 RUN --mount=target=. \
-    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
+    --mount=id=hex-cache,type=cache,sharing=locked,target=/root/.cache/rebar3 \
     rebar3 as prod tar && \
     tar -zxvf $REBAR_BASE_DIR/prod/rel/*/*.tar.gz -C /opt/rel
 
-FROM alpine:3.9 as runner
-
-# install openssl, needed by the crypto app
-RUN apk add --no-cache openssl ncurses
+FROM us.gcr.io/adoptingerlang/alpine:3.10.2 as runner
 
 WORKDIR /opt/service_discovery
 
-COPY --from=releaser /opt/rel .
+ENV COOKIE=service_discovery \
+    # write files generated during startup to /tmp
+    RELX_OUT_FILE_PATH=/tmp \
+    # service_discovery specific env variables to act as defaults
+    DB_HOST=127.0.0.1 \
+    LOGGER_LEVEL=debug \
+    SCHEDULERS=1
 
-ENV COOKIE service_discovery
-# write files generated during startup to /tmp
-ENV RELX_OUT_FILE_PATH /tmp
+# openssl needed by the crypto app
+RUN --mount=type=cache,id=apk,sharing=locked,target=/var/cache/apk \
+    ln -s /var/cache/apk /etc/apk/cache && \
+    apk add --update openssl ncurses
+
+COPY --from=releaser /opt/rel .
 
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 CMD ["foreground"]
 
-# image for running common test suites
-FROM builder as tester
-
-RUN apk add --no-cache py-pip python-dev libffi-dev openssl-dev gcc libc-dev make && \
-    pip install docker-compose
-
-RUN --mount=target=. \
-    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
-    rebar3 as test compile
-
-ENTRYPOINT ["rebar3"]
-CMD ["ct"]
-
-# image for caching dialyzer plt
-FROM builder as plt
-
-RUN --mount=target=. \
-    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
-    rebar3 dialyzer --plt-location /root/.cache/rebar3 \
-    --plt-prefix deps \
-    --base-plt-prefix otp
-
-ENTRYPOINT ["rebar3"]
-CMD ["dialyzer", "--plt-location", "/root/.cache/rebar3", "--plt-prefix", "deps", "--base-plt-prefix", "otp"]
-
 # image to use in tilt when running the release
-FROM builder as devrel
+FROM builder as dev_release
 
-RUN --mount=target=. \
-    --mount=id=hex-cache,type=cache,target=/root/.cache/rebar3 \
-    rebar3 release
+COPY . .
+RUN rebar3 as tilt release
 
-ENTRYPOINT ["/src/_build/default/rel/service_discovery/bin/service_discovery"]
+ENTRYPOINT ["/app/_build/tilt/rel/service_discovery/bin/service_discovery"]
 CMD ["foreground"]
+
+FROM busybox as dev_sql
+
+COPY apps/service_discovery_postgres/priv/migrations/ /app/sql/
