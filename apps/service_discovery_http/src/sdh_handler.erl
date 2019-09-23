@@ -12,19 +12,19 @@
 handle(Req, _Args) ->
     handle(Req#req.method, elli_request:path(Req), Req).
 
-handle('GET',[<<"healthz">>], _Req) ->
+handle('GET', [<<"healthz">>], _Req) ->
     {ok, [], <<>>};
 
-handle('GET',[<<"services">>], Req) ->
+handle('GET', [<<"services">>], Req) ->
     Services = service_discovery:list(),
     ServicesJson = json_encode_services(is_pretty(Req), Services),
     {ok, [?CONTENT_TYPE_JSON], ServicesJson};
 
-handle('GET',[<<"service">>, ServiceName], Req) ->
+handle('GET', [<<"service">>, ServiceName], Req) ->
     Service = service_discovery:lookup(ServiceName),
     ServiceJson = json_encode_service(is_pretty(Req), Service),
     {ok, [?CONTENT_TYPE_JSON], ServiceJson};
-handle('PUT',[<<"service">>], Req) ->
+handle('PUT', [<<"service">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
     case create_service(DecodedBody) of
@@ -34,11 +34,11 @@ handle('PUT',[<<"service">>], Req) ->
             {ok, [], uuid:uuid_to_string(ServiceId, binary_standard)}
     end;
 
-handle('GET',[<<"service">>, ServiceName, <<"endpoints">>], Req) ->
+handle('GET', [<<"service">>, ServiceName, <<"endpoints">>], Req) ->
     Endpoints = service_discovery:lookup_endpoints(ServiceName),
     EndpointsJson = json_encode_endpoints(is_pretty(Req), Endpoints),
     {ok, [?CONTENT_TYPE_JSON], EndpointsJson};
-handle('PUT',[<<"service">>, ServiceName, <<"ports">>], Req) ->
+handle('PUT', [<<"service">>, ServiceName, <<"ports">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
     case add_named_ports(ServiceName, DecodedBody) of
@@ -47,7 +47,7 @@ handle('PUT',[<<"service">>, ServiceName, <<"ports">>], Req) ->
         {error, Reason} ->
             {400, [], io_lib:format("error: ~p", [Reason])}
     end;
-handle('PUT',[<<"service">>, ServiceName, <<"register">>], Req) ->
+handle('PUT', [<<"service">>, ServiceName, <<"register">>], Req) ->
     Body = elli_request:body(Req),
     DecodedBody = jsx:decode(Body, [return_maps]),
     case register_service(ServiceName, DecodedBody) of
@@ -56,7 +56,7 @@ handle('PUT',[<<"service">>, ServiceName, <<"register">>], Req) ->
         {error, Reason} ->
             {400, [], io_lib:format("error: ~p", [Reason])}
     end;
-handle('PUT',[<<"service">>, <<"deregister">>, _ServiceId], _Req) ->
+handle('PUT', [<<"service">>, <<"deregister">>, _ServiceId], _Req) ->
     {ok, [], <<>>};
 
 handle(_, _, _Req) ->

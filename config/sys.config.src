@@ -22,7 +22,6 @@
 
    {use_root_hints, false},
    {catch_exceptions, false},
-   {zones, "${ZONES}"},
 
    {pools, [
             {tcp_worker_pool, erldns_worker, [
