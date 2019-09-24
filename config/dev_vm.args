@@ -1,0 +1,11 @@
+-sname service_discovery@localhost
+
+-setcookie service_discovery_cookie
+
++S 1
+
++C multi_time_warp
+
++sbwt none
+
++A30
