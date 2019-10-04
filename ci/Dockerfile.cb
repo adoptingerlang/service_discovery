@@ -1,5 +1,5 @@
-ARG BASE_IMAGE=erlang:22.0.7-alpine
-ARG RUNNER_IMAGE=alpine:3.9
+ARG BASE_IMAGE=erlang:22.1.1-alpine
+ARG RUNNER_IMAGE=alpine:3.10.2
 FROM $BASE_IMAGE as builder
 
 # git for fetching non-hex depenencies
@@ -40,5 +40,4 @@ ENV COOKIE service_discovery
 ENV RELX_OUT_FILE_PATH /tmp
 
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
-
 CMD ["foreground"]
