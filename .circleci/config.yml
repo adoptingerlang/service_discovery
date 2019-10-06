@@ -56,6 +56,11 @@ jobs:
             gcloud container clusters get-credentials adoptingerlang-stage
             kubectl get namespace
 
+            pushd deployment/overlays/stage
+            kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
+            popd
+            kubectl kustomize deployment/overlays/stage
+
 workflows:
   build-test-maybe-deploy:
     jobs:
