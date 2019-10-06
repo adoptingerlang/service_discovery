@@ -8,9 +8,10 @@ bases:
 - ../../base
 images:
 - name: service_discovery
-  newTag: latest
+  newName: service_discovery
+  newTag: master
 patchesStrategicMerge:
 - flyway_job_patch.yaml
 configMapGenerator:
-- name: configmap
-  env: dev.env
+- env: dev.env
+  name: configmap
