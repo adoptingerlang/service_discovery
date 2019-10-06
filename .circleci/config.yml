@@ -52,6 +52,7 @@ jobs:
       - gcp-gke/init
       - run:
           command: |
+            gcloud config set compute/zone us-central1-c
             gcloud container clusters get-credentials adoptingerlang-stage
             kubectl get namespace
 
@@ -97,6 +98,8 @@ workflows:
       - docker-build-and-push:
           requires:
           - rebar3/ct
+          - rebar3/dialyzer
+          - rebar3/xref
 
       - deploy:
           requires:
