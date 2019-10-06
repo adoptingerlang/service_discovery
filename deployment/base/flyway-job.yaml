@@ -5,7 +5,9 @@ metadata:
     service: flyway
   name: flyway
 spec:
-  ttlSecondsAfterFinished: 100
+  # alpha feature still as of 1.16
+  # deletes the job after it completes
+  ttlSecondsAfterFinished: 0
   template:
     metadata:
       labels:
