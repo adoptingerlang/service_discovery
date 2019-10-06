@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   rebar3: tsloughter/rebar3@0.7.0
   gcp-gcr: circleci/gcp-gcr@0.6.0
+  gcp-gke: circleci/gcp-gke@0.1.0
   docker: circleci/docker@0.5.13
 
 executors:
@@ -44,9 +45,18 @@ jobs:
             # need the docker-container driver for push without load to work
             ~/.docker/cli-plugins/docker-buildx create --driver docker-container --use
             ci/build_images.sh -p -t runner -r us.gcr.io/adoptingerlang
+  deploy:
+    machine: true
+    steps:
+      - gcp-gke/install
+      - gcp-gke/init
+      - run:
+          command: |
+            gcloud container clusters get-credentials adoptingerlang-stage
+            kubectl get namespace
 
 workflows:
-  build-test-maybe-publish:
+  build-test-maybe-deploy:
     jobs:
       - rebar3/compile
       - rebar3/xref:
@@ -87,3 +97,10 @@ workflows:
       - docker-build-and-push:
           requires:
           - rebar3/ct
+
+      - deploy:
+          requires:
+          - docker-build-and-push
+          filters:
+            branches:
+              only: stage
