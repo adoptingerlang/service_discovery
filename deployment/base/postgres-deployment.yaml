@@ -34,5 +34,6 @@ spec:
       restartPolicy: Always
       volumes:
       - name: pgdata
-        persistentVolumeClaim:
-          claimName: pgdata
+        emptyDir: {}
+        # persistentVolumeClaim:
+        #   claimName: pgdata

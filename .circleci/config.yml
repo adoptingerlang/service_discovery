@@ -67,10 +67,12 @@ jobs:
             gcloud config set compute/zone us-central1-c
             gcloud container clusters get-credentials adoptingerlang-stage
 
+            # using kustomize instead of kubectl apply -k because we need to edit the image
             # set image for stage to current git ref
             pushd deployment/overlays/stage
-            kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
+            kustomize edit set image service_discovery=us.gcr.io/adoptingerlang/service_discovery:$(git rev-parse HEAD)
             popd
+            kustomize build deployment/overlays/stage
             kustomize build deployment/overlays/stage | kubectl apply -f -
 
 workflows:
