@@ -13,9 +13,6 @@ images:
 - name: postgres
   newName: gcr.io/adoptingerlang/postgres
   newTag: 11-alpine
-- name: service_discovery
-  newName: service_discovery
-  newTag: c037c05256a0f6ef82fcff8f83ff982b4ee07079
 configMapGenerator:
 - env: stage.env
   name: configmap
