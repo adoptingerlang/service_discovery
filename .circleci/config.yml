@@ -48,16 +48,18 @@ jobs:
   deploy:
     machine: true
     steps:
+      - checkout
       - gcp-gke/install
       - gcp-gke/init
       - run:
           command: |
+            # setup kubectl to use stage cluster
             gcloud config set compute/zone us-central1-c
             gcloud container clusters get-credentials adoptingerlang-stage
-            kubectl get namespace
 
+            # set image for stage to current git ref
             pushd deployment/overlays/stage
-            kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
+            kubectl kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
             popd
             kubectl kustomize deployment/overlays/stage
 
