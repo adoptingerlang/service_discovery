@@ -53,15 +53,25 @@ jobs:
       - gcp-gke/init
       - run:
           command: |
+            opsys=linux
+            curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest |\
+              grep browser_download |\
+              grep $opsys |\
+              cut -d '"' -f 4 |\
+              xargs curl -O -L
+            sudo mv kustomize_*_${opsys}_amd64 /usr/local/bin/kustomize
+            sudo chmod u+x /usr/local/bin/kustomize
+      - run:
+          command: |
             # setup kubectl to use stage cluster
             gcloud config set compute/zone us-central1-c
             gcloud container clusters get-credentials adoptingerlang-stage
 
             # set image for stage to current git ref
             pushd deployment/overlays/stage
-            kubectl kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
+            kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
             popd
-            kubectl kustomize deployment/overlays/stage
+            kustomize build deployment/overlays/stage
 
 workflows:
   build-test-maybe-deploy:

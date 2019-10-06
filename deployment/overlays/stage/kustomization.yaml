@@ -7,15 +7,15 @@ commonLabels:
 bases:
 - ../../base
 images:
-- name: service_discovery
-  newName: gcr.io/adoptingerlang/service_discovery
-  newTag: c7569ec3a4b6ed5d3c261841ab9deb8459693157
-- name: postgres
-  newName: gcr.io/adoptingerlang/postgres
-  newTag: 11-alpine
 - name: flyway/flyway
   newName: gcr.io/adoptingerlang/flyway
   newTag: 6-alpine
+- name: postgres
+  newName: gcr.io/adoptingerlang/postgres
+  newTag: 11-alpine
+- name: service_discovery
+  newName: service_discovery
+  newTag: c037c05256a0f6ef82fcff8f83ff982b4ee07079
 configMapGenerator:
-- name: configmap
-  env: stage.env
+- env: stage.env
+  name: configmap
