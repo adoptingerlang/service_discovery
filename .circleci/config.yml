@@ -71,7 +71,7 @@ jobs:
             pushd deployment/overlays/stage
             kustomize edit set image service_discovery=service_discovery:$(git rev-parse HEAD)
             popd
-            kustomize build deployment/overlays/stage
+            kustomize build deployment/overlays/stage | kubectl apply -f -
 
 workflows:
   build-test-maybe-deploy:
