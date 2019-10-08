@@ -6,6 +6,7 @@ commonLabels:
   overlay: dev
 bases:
 - ../../base
+- ../../postgres
 images:
 - name: service_discovery
   newName: service_discovery
