@@ -15,7 +15,7 @@ spec:
         - -user=discovery
         - -password=password
         - -connectRetries=60
-        - validate
+        - migrate
         image: boxfuse/flyway:5.2.4
         name: flyway-validate
         volumeMounts:

@@ -6,6 +6,7 @@ commonLabels:
   overlay: stage
 bases:
 - ../../base
+- ../../postgres
 images:
 - name: flyway/flyway
   newName: gcr.io/adoptingerlang/flyway
