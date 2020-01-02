@@ -6,6 +6,7 @@ spec:
   replicas: 1
   template:
     spec:
+      shareProcessNamespace: true
       volumes:
       - name: migrations
         emptyDir:

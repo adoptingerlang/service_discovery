@@ -8,16 +8,35 @@ custom_build(
     entrypoint="cp /app/sql/* /flyway/sql"
 )
 
+# custom_build(
+#     'service_discovery',
+#     'docker buildx build -o type=docker --target dev_release --tag $EXPECTED_REF .',
+#     ['.'],
+#     live_update=[
+#         sync('rebar.config', '/app/src/rebar.config'),
+#         sync('apps', '/app/src/apps'),
+#         run('rebar3 as tilt compile'),
+#         run('/app/_build/tilt/rel/service_discovery/bin/service_discovery restart')
+#     ],
+#     ignore=["rebar.lock", "apps/service_discovery_postgres/priv/migrations/"]
+# )
+
+local_resource('release',
+    cmd='rebar3 as prod release',
+    deps=['apps']
+)
+
 custom_build(
     'service_discovery',
-    'docker buildx build -o type=docker --target dev_release --tag $EXPECTED_REF .',
-    ['.'],
+    'docker buildx build -o type=docker --target runner --tag $EXPECTED_REF .',
+    ['_build/prod/rel/service_discovery'],
     live_update=[
-        sync('apps', '/app/src/apps'),
-        run('rebar3 as tilt compile'),
-        run('/app/_build/tilt/rel/service_discovery/bin/service_discovery restart')
+        sync('_build/prod/rel/service_discovery', '/opt/service_discovery'),
+        run('/opt/service_discovery/bin/service_discovery restart')
     ],
-    ignore=["rebar.lock", "apps/service_discovery_postgres/priv/migrations/"]
+    ignore=["rebar.lock", "_build/default", "_build/prod/lib",
+            "apps",
+            "apps/service_discovery_postgres/priv/migrations/"]
 )
 
 k8s_yaml(kustomize('deployment/overlays/dev'))

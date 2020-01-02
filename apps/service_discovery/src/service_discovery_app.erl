@@ -15,6 +15,7 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
+    io:format("HELLO AGAIN~n"),
     {ok, StorageMod} = application:get_env(service_discovery, storage_module),
     sds_storage:configure_storage(StorageMod),
     service_discovery_sup:start_link().
