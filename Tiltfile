@@ -22,19 +22,19 @@ custom_build(
 # )
 
 local_resource('release',
-    cmd='rebar3 as prod release',
+    cmd='rebar3 as tilt release',
     deps=['apps']
 )
 
 custom_build(
     'service_discovery',
     'docker buildx build -o type=docker --target runner --tag $EXPECTED_REF .',
-    ['_build/prod/rel/service_discovery'],
+    ['_build/tilt/rel/service_discovery'],
     live_update=[
-        sync('_build/prod/rel/service_discovery', '/opt/service_discovery'),
+        sync('_build/tilt/rel/service_discovery', '/opt/service_discovery'),
         run('/opt/service_discovery/bin/service_discovery restart')
     ],
-    ignore=["rebar.lock", "_build/default", "_build/prod/lib",
+    ignore=["rebar.lock", "_build/default", "_build/tilt/lib",
             "apps",
             "apps/service_discovery_postgres/priv/migrations/"]
 )
