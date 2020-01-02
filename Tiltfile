@@ -13,6 +13,7 @@ custom_build(
     'docker buildx build -o type=docker --target dev_release --tag $EXPECTED_REF .',
     ['.'],
     live_update=[
+        sync('rebar.config', '/app/src/rebar.config'),
         sync('apps', '/app/src/apps'),
         run('rebar3 as tilt compile'),
         run('/app/_build/tilt/rel/service_discovery/bin/service_discovery restart')

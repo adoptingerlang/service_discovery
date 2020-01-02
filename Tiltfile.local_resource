@@ -1,0 +1,33 @@
+allow_k8s_contexts("microk8s")
+default_registry('127.0.0.1:32000')
+
+custom_build(
+    'service_discovery_sql',
+    'docker buildx build -o type=docker --target dev_sql --tag $EXPECTED_REF .',
+    ['apps/service_discovery_postgres/priv/migrations'],
+    entrypoint="cp /app/sql/* /flyway/sql"
+)
+
+local_resource('release',
+    cmd='rebar3 as prod release',
+    deps=['apps']
+)
+
+custom_build(
+    'service_discovery',
+    'docker buildx build -o type=docker -f Dockerfile.debian --target runner --tag $EXPECTED_REF .',
+    ['_build/prod/rel/service_discovery/bin',
+     '_build/prod/rel/service_discovery/lib',
+     '_build/prod/rel/service_discovery/releases'],
+    live_update=[
+        sync('_build/prod/rel/service_discovery/bin', '/opt/service_discovery/bin'),
+        sync('_build/prod/rel/service_discovery/lib', '/opt/service_discovery/lib'),
+        sync('_build/prod/rel/service_discovery/releases', '/opt/service_discovery/releases'),
+        run('/opt/service_discovery/bin/service_discovery restart')
+    ],
+    ignore=[]
+)
+
+k8s_yaml(kustomize('deployment/overlays/dev'))
+
+watch_file('deployment/')
