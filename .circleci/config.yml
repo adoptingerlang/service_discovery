@@ -53,13 +53,8 @@ jobs:
       - gcp-gke/init
       - run:
           command: |
-            opsys=linux
-            curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest |\
-              grep browser_download |\
-              grep $opsys |\
-              cut -d '"' -f 4 |\
-              xargs curl -O -L
-            sudo mv kustomize_*_${opsys}_amd64 /usr/local/bin/kustomize
+            curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+            sudo mv kustomize /usr/local/bin/kustomize
             sudo chmod u+x /usr/local/bin/kustomize
       - run:
           command: |
@@ -73,7 +68,7 @@ jobs:
             kustomize edit set image service_discovery=us.gcr.io/adoptingerlang/service_discovery:$(git rev-parse HEAD)
             popd
             kustomize build deployment/overlays/stage
-            kustomize build deployment/overlays/stage | kubectl apply -f -
+            # kustomize build deployment/overlays/stage | kubectl apply -f -
 
 workflows:
   build-test-maybe-deploy:
