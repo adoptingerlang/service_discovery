@@ -49,9 +49,6 @@ shift $((OPTIND -1))
 export DOCKER_BUILDKIT=1
 
 IMAGE=${registry}service_discovery
-BUILD_IMAGE=${IMAGE}:builder
-RELEASER_IMAGE=${IMAGE}:releaser
-PLT_IMAGE=${IMAGE}:plt
 
 GIT_REF=$(git rev-parse HEAD) # or with --short
 GIT_BRANCH=$(git symbolic-ref --short HEAD)
@@ -61,10 +58,10 @@ GIT_BRANCH=$(git symbolic-ref --short HEAD)
 ~/.docker/cli-plugins/docker-buildx build --target $target \
        $push \
        -o type=$type \
-       --tag ${IMAGE}:${GIT_BRANCH} \
-       --tag ${IMAGE}:${GIT_REF} \
-       --cache-from=${IMAGE}:${GIT_BRANCH} \
-       --cache-from=${IMAGE}:master \
+       --tag "${IMAGE}:${GIT_BRANCH}" \
+       --tag "${IMAGE}:${GIT_REF}" \
+       --cache-from="${IMAGE}:${GIT_BRANCH}" \
+       --cache-from="${IMAGE}:master" \
        --cache-to=type=inline \
        .
 
