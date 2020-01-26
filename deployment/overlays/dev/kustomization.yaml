@@ -9,10 +9,38 @@ bases:
 - ../../postgres
 images:
 - name: service_discovery
-  newName: service_discovery
   newTag: master
-patchesStrategicMerge:
-- flyway_job_patch.yaml
+
 configMapGenerator:
-- env: dev.env
-  name: configmap
+- name: configmap
+  envs:
+  - dev.env
+
+# For tilt we make an image named service_discovery_sql with the migrations.
+# This patch replaces the image used in the flyway migration job to match.
+patches:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: service-discovery
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/initContainers/0/image
+      value: service_discovery_sql
+    - op: replace
+      path: /spec/template/spec/initContainers/0/args
+      value: ["-c", "cp /app/sql/* /flyway/sql"]
+- target:
+    group: batch
+    version: v1
+    kind: Job
+    name: flyway
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/initContainers/0/image
+      value: service_discovery_sql
+    - op: replace
+      path: /spec/template/spec/initContainers/0/args
+      value: ["-c", "cp /app/sql/* /flyway/sql"]
+

@@ -20,6 +20,6 @@ custom_build(
     ignore=["rebar.lock", "apps/service_discovery_postgres/priv/migrations/"]
 )
 
-k8s_yaml(kustomize('deployment/overlays/dev'))
+k8s_yaml(local('kustomize build deployment/overlays/dev'))
 
 watch_file('deployment/')

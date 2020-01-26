@@ -9,3 +9,5 @@ resources:
 - namespace.yaml
 - deployment.yaml
 - service.yaml
+patchesStrategicMerge:
+- init_validation.yaml
