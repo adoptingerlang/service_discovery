@@ -15,5 +15,6 @@ images:
   newName: gcr.io/adoptingerlang/postgres
   newTag: 11-alpine
 configMapGenerator:
-- env: stage.env
-  name: configmap
+- name: configmap
+  envs:
+  - stage.env
