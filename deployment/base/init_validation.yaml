@@ -10,6 +10,14 @@ spec:
       - name: migrations
         emptyDir: {}
       initContainers:
+      - name: service-discovery-sql
+        image: service_discovery
+        volumeMounts:
+          - name: migrations
+            mountPath: /flyway/sql
+        command: ["/bin/sh"]
+        args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]
+
       - args:
         - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
         - -user=discovery
@@ -21,11 +29,3 @@ spec:
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
-
-      - name: service-discovery-sql
-        image: service_discovery-sql
-        volumeMounts:
-          - name: migrations
-            mountPath: /flyway/sql
-        command: ["/bin/sh"]
-        args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]

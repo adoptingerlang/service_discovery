@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:experimental
-FROM us.gcr.io/adoptingerlang/erlang:22.1.1-alpine as builder
+FROM us.gcr.io/adoptingerlang/erlang:22.2.1-alpine as builder
 
 WORKDIR /app/src
 ENV REBAR_BASE_DIR /app/_build

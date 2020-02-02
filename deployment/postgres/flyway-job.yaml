@@ -5,7 +5,9 @@ metadata:
     service: flyway
   name: flyway
 spec:
-  ttlSecondsAfterFinished: 100
+  # alpha feature still as of 1.16
+  # deletes the job after it completes
+  ttlSecondsAfterFinished: 0
   template:
     metadata:
       labels:
@@ -14,7 +16,9 @@ spec:
       restartPolicy: OnFailure
       volumes:
       - name: migrations
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+
       containers:
       - args:
         - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
@@ -27,11 +31,12 @@ spec:
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
+
       initContainers:
       - name: service-discovery-sql
         image: service_discovery
+        command: ["/bin/sh"]
+        args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]
         volumeMounts:
           - name: migrations
             mountPath: /flyway/sql
-        command: ["/bin/sh"]
-        args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]

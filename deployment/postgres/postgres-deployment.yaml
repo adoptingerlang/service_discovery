@@ -34,5 +34,7 @@ spec:
       restartPolicy: Always
       volumes:
       - name: pgdata
-        persistentVolumeClaim:
-          claimName: pgdata
+        emptyDir: {}
+        # TODO: add this back through a kustomize patch if we use it for stage/prod instead of cloudsql
+        # persistentVolumeClaim:
+        #   claimName: pgdata
