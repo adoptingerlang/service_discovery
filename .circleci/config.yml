@@ -120,4 +120,4 @@ workflows:
           - docker-build-and-push
           filters:
             branches:
-              only: stage
+              only: master
