@@ -59,7 +59,7 @@ jobs:
       - run:
           command: |
             # setup kubectl to use stage cluster
-            gcloud config set compute/zone us-central1-c
+            gcloud config set compute/zone us-central1-a
             gcloud container clusters get-credentials adoptingerlang-stage
 
             # using kustomize instead of kubectl apply -k because we need to edit the image
