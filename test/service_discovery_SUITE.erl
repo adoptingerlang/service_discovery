@@ -12,7 +12,9 @@ suite() ->
     %% don't use compose hook in circleci
     case os:getenv("CI") of
         false ->
-            [{ct_hooks, [docker_compose_cth]}];
+            %% this won't work until it can properly wait for the db migration to complete
+            %% [{ct_hooks, [docker_compose_cth]}];
+            [];
         _ ->
             []
     end.
