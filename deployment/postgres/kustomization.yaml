@@ -3,8 +3,6 @@ kind: Kustomization
 namespace: service-discovery
 commonLabels:
   app: postgres
-commonAnnotations:
-  oncallPager: 800-555-1212
 resources:
 - flyway-job.yaml
 - postgres-deployment.yaml
