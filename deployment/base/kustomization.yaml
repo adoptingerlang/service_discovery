@@ -3,8 +3,6 @@ kind: Kustomization
 namespace: service-discovery
 commonLabels:
   app: service-discovery
-commonAnnotations:
-  oncallPager: 800-555-1212
 resources:
 - namespace.yaml
 - deployment.yaml

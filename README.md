@@ -49,7 +49,7 @@ webapp.svc.cluster.local. 3600 IN	A	127.0.0.1
 $ microk8s.enable registry
 $ microk8s.enable dns
 ``` 
-=/etc/docker/daemon.json=
+`/etc/docker/daemon.json`:
 
 ``` shell
 {
