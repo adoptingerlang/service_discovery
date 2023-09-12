@@ -1,18 +1,24 @@
 version: '3'
 services:
   postgres:
-    image: circleci/postgres:11-alpine-ram
+    image: postgres/postgres:15.4
     ports:
     - 5432:5432
     environment:
       POSTGRES_DB: discovery
       POSTGRES_USER: discovery
       POSTGRES_PASSWORD: password
+    healthcheck:
+      test: [“CMD-SHELL”, “pg_isready”]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
     volumes:
     - pgdata:/var/lib/postgresql/data
 
   flyway:
-    image: flyway/flyway:6-alpine
+    image: flyway/flyway:9.22
     command:
     - -url=jdbc:postgresql://postgres:5432/discovery
     - -user=discovery
@@ -22,7 +28,8 @@ services:
     volumes:
     - ./apps/service_discovery_postgres/priv/migrations:/flyway/sql
     depends_on:
-    - postgres
+    - postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
