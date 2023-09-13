@@ -1,16 +1,16 @@
-# syntax = docker/dockerfile:experimental
-FROM docker.pkg.github.com/adoptingerlang/service_discovery/erlang:22.1.1-alpine as builder
+# syntax=docker/dockerfile:1.2
+FROM ghcr.io/adoptingerlang/service_discovery/erlang:26.0.2 as builder
 
 WORKDIR /app/src
 ENV REBAR_BASE_DIR /app/_build
 
+RUN rm -f /etc/apt/apt.conf.d/docker-clean
+
 # Install git for fetching non-hex depenencies.
-# Add any other Alpine libraries needed to compile the project here.
-# See https://wiki.alpinelinux.org/wiki/Local_APK_cache for details
-# on the local cache and need for the symlink
-RUN --mount=type=cache,id=apk,sharing=locked,target=/var/cache/apk \
-    ln -s /var/cache/apk /etc/apk/cache && \
-    apk add --update git
+# Add any other Debian libraries needed to compile the project here.
+RUN --mount=target=/var/lib/apt/lists,id=apt-lists,type=cache,sharing=locked \
+    --mount=type=cache,id=apt,target=/var/cache/apt \
+    apt update && apt install --no-install-recommends -y git
 
 # build and cache dependencies as their own layer
 COPY rebar.config rebar.lock .

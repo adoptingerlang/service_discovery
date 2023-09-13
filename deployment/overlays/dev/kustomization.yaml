@@ -2,47 +2,47 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: service-discovery-dev
 nameSuffix: -dev
-commonLabels:
-  overlay: dev
-bases:
-- ../../base
-- ../../postgres
 images:
 - name: service_discovery
   newTag: master
 
 configMapGenerator:
-- name: configmap
-  envs:
+- envs:
   - dev.env
+  name: configmap
 resources:
 - service_nodeport.yaml
+- ../../base
+- ../../postgres
 
 # For tilt we make an image named service_discovery_sql with the migrations.
 # This patch replaces the image used in the flyway migration job to match.
 patches:
-- target:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/initContainers/0/image
+      value: service_discovery_sql
+    - op: replace
+      path: /spec/template/spec/initContainers/0/args
+      value: ["-c", "cp /app/sql/* /flyway/sql"]
+  target:
     group: apps
-    version: v1
     kind: Deployment
     name: service-discovery
-  patch: |-
+    version: v1
+- patch: |-
     - op: replace
       path: /spec/template/spec/initContainers/0/image
       value: service_discovery_sql
     - op: replace
       path: /spec/template/spec/initContainers/0/args
       value: ["-c", "cp /app/sql/* /flyway/sql"]
-- target:
+  target:
     group: batch
-    version: v1
     kind: Job
     name: flyway
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/initContainers/0/image
-      value: service_discovery_sql
-    - op: replace
-      path: /spec/template/spec/initContainers/0/args
-      value: ["-c", "cp /app/sql/* /flyway/sql"]
-
+    version: v1
+labels:
+- includeSelectors: true
+  pairs:
+    overlay: dev

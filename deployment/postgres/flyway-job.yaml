@@ -26,7 +26,7 @@ spec:
         - -password=password
         - -connectRetries=60
         - migrate
-        image: flyway/flyway:6-alpine
+        image: flyway/flyway:9.22
         name: flyway
         volumeMounts:
         - name: migrations
