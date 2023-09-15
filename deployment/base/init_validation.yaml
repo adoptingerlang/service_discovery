@@ -18,14 +18,23 @@ spec:
         command: ["/bin/sh"]
         args: ["-c", "cp /opt/service_discovery/sql/* /flyway/sql"]
 
-      - args:
-        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
-        - -user=discovery
-        - -password=password
-        - -connectRetries=60
-        - validate
-        image: flyway/flyway:6.2.1
+      - image: flyway/flyway:9.22
         name: flyway-validate
+        args:
+        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/$(POSTGRES_DB)"
+        - "-user=$(POSTGRES_USER)"
+        - "-password=$(POSTGRES_PASSWORD)"
+        - "-connectRetries=60"
+        - validate
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
+        env:
+        - name: POSTGRES_SERVICE
+          value: POSTGRES_SERVICE
+        - name: POSTGRES_DB
+          value: POSTGRES_DB
+        - name: POSTGRES_USER
+          value: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          value: POSTGRES_PASSWORD

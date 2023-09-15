@@ -10,13 +10,14 @@ docker_build('service_discovery_sql',
 
 docker_build('service_discovery',
              '.',
-             live_update=[
-                 sync('apps', '/app/src/apps'),
-                 run('rebar3 as tilt compile'),
-                 run('/app/_build/tilt/rel/service_discovery/bin/service_discovery restart')
-             ],
+             # live_update=[
+             #     sync('apps', '/app/src/apps'),
+             #     run('rebar3 as tilt compile'),
+             #     run('/app/_build/tilt/rel/service_discovery/bin/service_discovery restart')
+             # ],
              target='dev_release',
-             ignore=["apps/service_discovery_postgres/priv/migrations/"])
+             # ignore=["apps/service_discovery_postgres/priv/migrations/"]
+             )
 
 k8s_yaml(local('kustomize build deployment/overlays/dev'))
 

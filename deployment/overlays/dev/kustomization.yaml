@@ -4,7 +4,7 @@ namespace: service-discovery-dev
 nameSuffix: -dev
 images:
 - name: service_discovery
-  newTag: master
+  newTag: main
 
 configMapGenerator:
 - envs:
@@ -15,33 +15,63 @@ resources:
 - ../../base
 - ../../postgres
 
-# For tilt we make an image named service_discovery_sql with the migrations.
-# This patch replaces the image used in the flyway migration job to match.
-patches:
-- patch: |-
-    - op: replace
-      path: /spec/template/spec/initContainers/0/image
-      value: service_discovery_sql
-    - op: replace
-      path: /spec/template/spec/initContainers/0/args
-      value: ["-c", "cp /app/sql/* /flyway/sql"]
-  target:
-    group: apps
+replacements:
+- source:
+    version: v1
+    kind: Service
+    name: postgres
+  targets:
+  - select:
+      kind: Deployment
+      name: service-discovery
+    fieldPaths:
+    - spec.template.spec.containers.[name=service-discovery].env.[name=DB_HOST].value
+  - select:
+      kind: Job
+      name: flyway
+    fieldPaths:
+    - spec.template.spec.containers.[name=flyway].env.[name=POSTGRES_SERVICE].value
+  - select:
+      kind: Deployment
+      name: service-discovery
+    fieldPaths:
+    - spec.template.spec.initContainers.[name=flyway-validate].env.[name=POSTGRES_SERVICE].value
+- source:
+    version: v1
     kind: Deployment
-    name: service-discovery
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_DB].value
+  targets:
+  - select:
+      version: v1
+      kind: Deployment
+      name: service-discovery
+    fieldPaths:
+    - spec.template.spec.initContainers.[name=flyway-validate].env.[name=POSTGRES_DB].value
+- source:
     version: v1
-- patch: |-
-    - op: replace
-      path: /spec/template/spec/initContainers/0/image
-      value: service_discovery_sql
-    - op: replace
-      path: /spec/template/spec/initContainers/0/args
-      value: ["-c", "cp /app/sql/* /flyway/sql"]
-  target:
-    group: batch
-    kind: Job
-    name: flyway
+    kind: Deployment
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_USER].value
+  targets:
+  - select:
+      version: v1
+      kind: Deployment
+      name: service-discovery
+    fieldPaths:
+    - spec.template.spec.initContainers.[name=flyway-validate].env.[name=POSTGRES_USER].value
+- source:
     version: v1
+    kind: Deployment
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_PASSWORD].value
+  targets:
+  - select:
+      version: v1
+      kind: Deployment
+      name: service-discovery
+    fieldPaths:
+    - spec.template.spec.initContainers.[name=flyway-validate].env.[name=POSTGRES_PASSWORD].value
 labels:
 - includeSelectors: true
   pairs:

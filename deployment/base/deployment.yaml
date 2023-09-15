@@ -27,7 +27,7 @@ spec:
           name: grpc
         env:
         - name: DB_HOST
-          value: $(POSTGRES_SERVICE)
+          value: POSTGRES_SERVICE
         - name: SCHEDULERS
           valueFrom:
             resourceFieldRef:

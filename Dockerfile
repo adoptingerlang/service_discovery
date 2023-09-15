@@ -63,6 +63,9 @@ FROM builder as dev_release
 COPY . .
 RUN rebar3 as tilt release
 
+RUN mkdir -p /opt/service_discovery/
+RUN cp -R /app/_build/tilt/rel/service_discovery/sql /opt/service_discovery/sql
+
 ENTRYPOINT ["/app/_build/tilt/rel/service_discovery/bin/service_discovery"]
 CMD ["foreground"]
 
