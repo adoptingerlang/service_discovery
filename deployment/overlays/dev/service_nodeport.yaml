@@ -1,0 +1,24 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: service-discovery-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: service-discovery
+  ports:
+  - name: dns
+    protocol: UDP
+    port: 8053
+    targetPort: dns
+    nodePort: 30053
+  - name: http
+    protocol: TCP
+    port: 3000
+    targetPort: http
+    nodePort: 30950
+  - name: grpc
+    protocol: TCP
+    port: 8081
+    targetPort: grpc
+    nodePort: 30081

@@ -9,11 +9,11 @@ bases:
 - ../../postgres
 images:
 - name: flyway/flyway
-  newName: gcr.io/adoptingerlang/flyway
-  newTag: 6-alpine
+  newName: ghcr.io/adoptingerlang/service_discovery/flyway
+  newTag: 9.22
 - name: postgres
-  newName: gcr.io/adoptingerlang/postgres
-  newTag: 11-alpine
+  newName: ghcr.io/adoptingerlang/service_discovery/postgres
+  newTag: 15.4
 configMapGenerator:
 - name: configmap
   envs:

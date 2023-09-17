@@ -1,0 +1,19 @@
+apiVersion: ctlptl.dev/v1alpha1
+kind: Registry
+name: ctlptl-registry
+port: 5002
+---
+apiVersion: ctlptl.dev/v1alpha1
+kind: Cluster
+product: kind
+registry: ctlptl-registry
+kindV1Alpha4Cluster:
+  name: adoptingerlang
+  nodes:
+  - role: control-plane
+    extraPortMappings:
+    - containerPort: 30950
+      hostPort: 30950
+    - containerPort: 30053
+      hostPort: 30053
+      protocol: UDP
