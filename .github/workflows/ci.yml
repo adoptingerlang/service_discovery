@@ -51,17 +51,19 @@ jobs:
       with:
         report_paths: '**/_build/test/logs/*/junit_report.xml'
 
-    - name: XRef
-      run: rebar3 xref
-
     - name: Covertool
       if: ${{ always() }}
       run: rebar3 covertool generate
     - uses: codecov/codecov-action@v3
       if: ${{ always() }}
       with:
-        file: _build/test/covertool/service_discovery.covertool.xml
+        directory: ./_build/test/covertool/
+        files: service_discovery.covertool.xml,service_discovery_postgres.covertool.xml,service_discovery_grpc.covertool.xml,service_discovery_storage.covertool.xml,service_discovery_http.covertool.xml
         env_vars: OTP_VERSION
+
+    - name: XRef
+      run: rebar3 xref
+
   dialyzer:
     name: Dialyze on OTP ${{ matrix.otp_version }} and ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
