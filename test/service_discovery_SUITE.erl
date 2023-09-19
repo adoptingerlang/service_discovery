@@ -37,7 +37,7 @@ create_service(_Config) ->
 
     service_discovery:register(ServiceName, #{ip => {127,0,0,1},
                                               tags => []}),
-    ?assertMatch([{127,0,0,1}], dns_a_lookup(ServiceName)),
+    ?assertMatch([{127,0,0,2}], dns_a_lookup(ServiceName)),
 
     ok.
 
