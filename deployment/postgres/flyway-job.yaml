@@ -5,8 +5,6 @@ metadata:
     service: flyway
   name: flyway
 spec:
-  # alpha feature still as of 1.16
-  # deletes the job after it completes
   ttlSecondsAfterFinished: 0
   template:
     metadata:
@@ -21,9 +19,9 @@ spec:
 
       containers:
       - args:
-        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/discovery"
-        - -user=discovery
-        - -password=password
+        - "-url=jdbc:postgresql://$(POSTGRES_SERVICE):5432/$(POSTGRES_DB)"
+        - -user=$(POSTGRES_USER)
+        - -password=$(POSTGRES_PASSWORD)
         - -connectRetries=60
         - migrate
         image: flyway/flyway:9.22
@@ -31,6 +29,15 @@ spec:
         volumeMounts:
         - name: migrations
           mountPath: /flyway/sql
+        env:
+        - name: POSTGRES_SERVICE
+          value: POSTGRES_SERVICE
+        - name: POSTGRES_DB
+          value: POSTGRES_DB
+        - name: POSTGRES_USER
+          value: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          value: POSTGRES_PASSWORD
 
       initContainers:
       - name: service-discovery-sql

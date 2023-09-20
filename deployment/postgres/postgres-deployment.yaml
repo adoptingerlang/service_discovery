@@ -23,7 +23,7 @@ spec:
           value: discovery
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
-        image: postgres/postgres:15.4
+        image: postgres:15.4
         name: postgres
         ports:
         - containerPort: 5432

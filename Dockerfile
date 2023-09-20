@@ -57,15 +57,3 @@ COPY --from=releaser /opt/rel .
 ENTRYPOINT ["/opt/service_discovery/bin/service_discovery"]
 CMD ["foreground"]
 
-# image to use in tilt when running the release
-FROM builder as dev_release
-
-COPY . .
-RUN rebar3 as tilt release
-
-ENTRYPOINT ["/app/_build/tilt/rel/service_discovery/bin/service_discovery"]
-CMD ["foreground"]
-
-FROM busybox as dev_sql
-
-COPY apps/service_discovery_postgres/priv/migrations/ /app/sql/

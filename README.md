@@ -26,7 +26,7 @@ This will be running an HTTP interface on port `3000` and grpc on `8081`. The fo
 ``` shell
 $ curl -v -XPUT http://localhost:3000/service -d '{"name": "webapp", "attributes": {"attr-1": "value-1"}}'
 $ curl -v -XPUT http://localhost:3000/service/webapp/register -d '{"ip": "127.0.0.1", "tags": []}'
-$ curl -v -XPUT http://localhost:3000/service/webapp/port -d '{"http": {"protocol": "tcp", "port": 8000}}'
+$ curl -v -XPUT http://localhost:3000/service/webapp/ports -d '{"http": {"protocol": "tcp", "port": 8000}}'
 ```
 
 `service_discovery` will also be running a DNS server on port `8053` and after adding the endpoint and port it can be queried with `dig` for the new service `webapp`:

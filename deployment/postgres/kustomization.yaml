@@ -6,13 +6,54 @@ resources:
 - postgres-deployment.yaml
 - postgres-service.yaml
 - pgdata-persistentvolumeclaim.yaml
-vars:
-- fieldref: {}
-  name: POSTGRES_SERVICE
-  objref:
-    apiVersion: v1
+
+# this is overridden by the overlays replacement
+# so the dev overlway will set POSTGRES_SERVICE to postgres-dev
+replacements:
+- source:
+    version: v1
     kind: Service
     name: postgres
+  targets:
+  - select:
+      kind: Job
+      name: flyway
+    fieldPaths:
+    - spec.template.spec.containers.[name=flyway].env.[name=POSTGRES_SERVICE].value
+- source:
+    version: v1
+    kind: Deployment
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_DB].value
+  targets:
+  - select:
+      kind: Job
+      name: flyway
+    fieldPaths:
+    - spec.template.spec.containers.[name=flyway].env.[name=POSTGRES_DB].value
+- source:
+    version: v1
+    kind: Deployment
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_USER].value
+  targets:
+  - select:
+      kind: Job
+      name: flyway
+    fieldPaths:
+    - spec.template.spec.containers.[name=flyway].env.[name=POSTGRES_USER].value
+- source:
+    version: v1
+    kind: Deployment
+    name: postgres
+    fieldPath: spec.template.spec.containers.[name=postgres].env.[name=POSTGRES_PASSWORD].value
+  targets:
+  - select:
+      kind: Job
+      name: flyway
+    fieldPaths:
+    - spec.template.spec.containers.[name=flyway].env.[name=POSTGRES_PASSWORD].value
+
 labels:
 - includeSelectors: true
   pairs:

@@ -61,7 +61,7 @@ GIT_BRANCH=$(git symbolic-ref --short HEAD)
        --tag "${IMAGE}:${GIT_BRANCH}" \
        --tag "${IMAGE}:${GIT_REF}" \
        --cache-from="${IMAGE}:${GIT_BRANCH}" \
-       --cache-from="${IMAGE}:master" \
+       --cache-from="${IMAGE}:main" \
        --cache-to=type=inline \
        .
 
