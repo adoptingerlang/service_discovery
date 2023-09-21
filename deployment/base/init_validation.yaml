@@ -25,6 +25,7 @@ spec:
         - "-user=$(POSTGRES_USER)"
         - "-password=$(POSTGRES_PASSWORD)"
         - "-connectRetries=60"
+        - "-skipCheckForUpdate"
         - validate
         volumeMounts:
         - name: migrations
