@@ -42,8 +42,7 @@ ENV COOKIE=service_discovery \
     RELX_OUT_FILE_PATH=/tmp \
     # service_discovery specific env variables to act as defaults
     DB_HOST=127.0.0.1 \
-    LOGGER_LEVEL=debug \
-    SCHEDULERS=1
+    LOGGER_LEVEL=debug
 
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 

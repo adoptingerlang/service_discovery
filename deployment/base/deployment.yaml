@@ -28,12 +28,6 @@ spec:
         env:
         - name: DB_HOST
           value: POSTGRES_SERVICE
-        - name: SCHEDULERS
-          valueFrom:
-            resourceFieldRef:
-              containerName: service-discovery
-              resource: limits.cpu
-              divisor: 1
         envFrom:
         - configMapRef:
             name: configmap

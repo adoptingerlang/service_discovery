@@ -2,8 +2,6 @@
 
 -setcookie service_discovery_cookie
 
-+S ${SCHEDULERS}
-
 +C multi_time_warp
 
 +sbwt none
