@@ -37,17 +37,3 @@ spec:
         envFrom:
         - configMapRef:
             name: configmap
-
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: http
-          initialDelaySeconds: 3
-          periodSeconds: 5
-
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: http
-          initialDelaySeconds: 3
-          periodSeconds: 15
