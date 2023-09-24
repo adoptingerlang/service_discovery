@@ -28,6 +28,8 @@ spec:
         env:
         - name: DB_HOST
           value: POSTGRES_SERVICE
+        - name: ERL_DIST_PORT
+          value: "5555"
         envFrom:
         - configMapRef:
             name: configmap
