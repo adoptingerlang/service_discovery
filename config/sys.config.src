@@ -6,17 +6,18 @@
                                              user => "discovery",
                                              password => "password",
                                              database => "discovery"}}]},
+
  {service_discovery_grpc,
   [{server, #{grpc_opts => #{service_protos => [sdg_discovery_pb,
-                                                  grpcbox_health_pb,
-                                                  grpcbox_reflection_pb],
-                               services => #{'sd.DiscoveryService' => sdg_service,
-                                             'grpc.health.v1.Health' => grpcbox_health_service,
-                                             'grpc.reflection.v1alpha.ServerReflection' =>
-                                                 grpcbox_reflection_service}},
+                                                grpcbox_health_pb,
+                                                grpcbox_reflection_pb],
+                             services => #{'sd.DiscoveryService' => sdg_service,
+                                           'grpc.health.v1.Health' => grpcbox_health_service,
+                                           'grpc.reflection.v1alpha.ServerReflection' =>
+                                               grpcbox_reflection_service}},
 
-                listen_opts => #{port => 8081,
-                                 ip => {0,0,0,0}}}}]},
+              listen_opts => #{port => 8081,
+                               ip => {0,0,0,0}}}}]},
 
  {erldns,
   [%% DB Config
@@ -43,6 +44,6 @@
   ]},
 
  {kernel, [{logger, [{handler, default, logger_std_h,
-                      #{level => ${LOGGER_LEVEL},
+                      #{level => '${LOGGER_LEVEL}',
                         formatter => {logger_formatter, #{single_line => true}}}}]}]}
 ].
