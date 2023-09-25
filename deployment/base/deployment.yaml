@@ -33,3 +33,10 @@ spec:
         envFrom:
         - configMapRef:
             name: configmap
+
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 1
+          periodSeconds: 10
