@@ -49,7 +49,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean
 # openssl needed by the crypto app
 RUN --mount=target=/var/lib/apt/lists,id=apt-lists,type=cache,sharing=locked \
     --mount=type=cache,id=apt,sharing=locked,target=/var/cache/apt \
-    apt install --no-install-recommends -y openssl ncurses-bin
+    apt update && apt install --no-install-recommends -y openssl ncurses-bin
 
 COPY --from=releaser /opt/rel .
 
