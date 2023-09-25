@@ -42,15 +42,14 @@ ENV COOKIE=service_discovery \
     RELX_OUT_FILE_PATH=/tmp \
     # service_discovery specific env variables to act as defaults
     DB_HOST=127.0.0.1 \
-    LOGGER_LEVEL=debug \
-    SCHEDULERS=1
+    LOGGER_LEVEL=debug
 
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 
 # openssl needed by the crypto app
 RUN --mount=target=/var/lib/apt/lists,id=apt-lists,type=cache,sharing=locked \
     --mount=type=cache,id=apt,sharing=locked,target=/var/cache/apt \
-    apt install --no-install-recommends -y openssl ncurses-bin
+    apt update && apt install --no-install-recommends -y openssl ncurses-bin
 
 COPY --from=releaser /opt/rel .
 

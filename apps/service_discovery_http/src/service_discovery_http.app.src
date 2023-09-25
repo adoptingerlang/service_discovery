@@ -9,7 +9,8 @@
     service_discovery,
     jsx,
     acceptor_pool,
-    elli
+    elli,
+    uuid
    ]},
   {env,[]},
   {modules, []},

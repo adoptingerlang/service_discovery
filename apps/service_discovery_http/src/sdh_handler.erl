@@ -12,15 +12,8 @@
 handle(Req, _Args) ->
     handle(Req#req.method, elli_request:path(Req), Req).
 
-handle('GET', [<<"healthz">>], _Req) ->
-    {ok, [], <<>>};
 handle('GET', [<<"ready">>], _Req) ->
-    case service_discovery_http_app:is_shutting_down() of
-        true ->
-            {503, [], <<>>};
-        _ ->
-            {ok, [], <<>>}
-    end;
+    {ok, [], <<>>};
 
 handle('GET', [<<"services">>], Req) ->
     Services = service_discovery:list(),
