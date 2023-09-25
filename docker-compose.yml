@@ -25,6 +25,7 @@ services:
     - -user=discovery
     - -password=password
     - -connectRetries=60
+    - -skipCheckForUpdate
     - migrate
     volumes:
     - ./apps/service_discovery_postgres/priv/migrations:/flyway/sql

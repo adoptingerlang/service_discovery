@@ -23,6 +23,7 @@ spec:
         - -user=$(POSTGRES_USER)
         - -password=$(POSTGRES_PASSWORD)
         - -connectRetries=60
+        - -skipCheckForUpdate
         - migrate
         image: flyway/flyway:9.22
         name: flyway
