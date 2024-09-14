@@ -8,6 +8,7 @@
     stdlib,
     eql,
     pgo,
+    dns_erlang,
     service_discovery_storage,
     service_discovery
    ]},
