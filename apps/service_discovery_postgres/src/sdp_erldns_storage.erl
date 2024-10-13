@@ -2,7 +2,7 @@
 
 -include_lib("erldns/include/erldns.hrl").
 -include_lib("kernel/include/logger.hrl").
--include_lib("dns/include/dns.hrl").
+-include_lib("dns_erlang/include/dns.hrl").
 
 %% API
 -export([create/1,
